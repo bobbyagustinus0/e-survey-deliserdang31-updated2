@@ -1,0 +1,17 @@
+/vendor
+/node_modules
+/public/build
+
+.env
+.env.backup
+.env.production
+
+.phpunit.result.cache
+
+/storage/*.key
+/storage/framework/
+/storage/logs/
+
+# Laravel cache
+/bootstrap/cache/*
+!/bootstrap/cache/.gitignore

@@ -1,0 +1,39 @@
+{
+    "name": "E-Survey Deli Serdang",
+    "short_name": "E-Survey",
+    "description": "Sistem Survey Kepuasan Layanan Digital - Pemerintah Kabupaten Deli Serdang",
+    "start_url": "/dashboard",
+    "id": "/dashboard",
+    "scope": "/",
+    "display": "standalone",
+    "orientation": "portrait-primary",
+    "background_color": "#f4f6f8",
+    "theme_color": "#0d6e3f",
+    "lang": "id",
+    "icons": [
+        {
+            "src": "/icons/icon-192x192.png",
+            "sizes": "192x192",
+            "type": "image/png",
+            "purpose": "any"
+        },
+        {
+            "src": "/icons/icon-192x192.png",
+            "sizes": "192x192",
+            "type": "image/png",
+            "purpose": "maskable"
+        },
+        {
+            "src": "/icons/icon-512x512.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "any"
+        },
+        {
+            "src": "/icons/icon-512x512.png",
+            "sizes": "512x512",
+            "type": "image/png",
+            "purpose": "maskable"
+        }
+    ]
+}
