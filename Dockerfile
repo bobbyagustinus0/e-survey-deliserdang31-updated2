@@ -62,14 +62,14 @@ COPY . .
 COPY --from=assets /app/public/build ./public/build
 
 # Prepare Laravel
-RUN composer dump-autoload --optimize \
-    && mkdir -p \
+RUN mkdir -p \
         storage/framework/sessions \
         storage/framework/views \
         storage/framework/cache \
         storage/logs \
         bootstrap/cache \
-    && chmod -R 775 storage bootstrap/cache
+    && chmod -R 775 storage bootstrap/cache \
+    && composer dump-autoload --optimize
 
 # =========================
 # Entrypoint
