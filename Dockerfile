@@ -80,6 +80,12 @@ set -e
 
 echo "Starting Laravel..."
 
+# Ensure .env file exists (Railway uses env vars, but artisan needs a file to write to)
+if [ ! -f .env ]; then
+    echo ".env not found, creating empty one..."
+    touch .env
+fi
+
 # Generate APP_KEY only if it doesn't exist
 if [ -z "$APP_KEY" ]; then
     echo "APP_KEY is missing, generating..."
@@ -89,15 +95,16 @@ fi
 # Create storage link
 php artisan storage:link || true
 
+# Run database migrations first (creates tables like `cache` that
+# optimize:clear / config:cache below may depend on)
+php artisan migrate --force
+
 # Clear old Laravel caches
 php artisan optimize:clear
 
 # Cache configuration and routes
 php artisan config:cache
 php artisan route:cache
-
-# Run database migrations
-php artisan migrate --force
 
 # Railway PORT
 PORT="${PORT:-8080}"
