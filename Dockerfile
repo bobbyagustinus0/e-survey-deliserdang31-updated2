@@ -1,15 +1,75 @@
+# syntax=docker/dockerfile:1.4
+
+# =========================
+# Stage 1: Build Vite
+# =========================
+FROM node:20-alpine AS assets
+
+WORKDIR /app
+
+COPY package.json package-lock.json* ./
+
+RUN npm install
+
+COPY . .
+
+RUN npm run build
+
+
+# =========================
+# Stage 2: Laravel PHP
+# =========================
+FROM php:8.4-cli-alpine
+
+# Install system dependencies + PHP extensions
+RUN apk add --no-cache \
+    git \
+    curl \
+    zip \
+    unzip \
+    libpng-dev \
+    libzip-dev \
+    oniguruma-dev \
+    icu-dev \
+    && docker-php-ext-install \
+    pdo_mysql \
+    mbstring \
+    exif \
+    pcntl \
+    bcmath \
+    gd \
+    zip \
+    intl
+
+# Install Composer
+COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
+
+WORKDIR /var/www/html
+
+# Install Composer dependencies
+COPY composer.json composer.lock ./
+
+RUN composer install \
+    --no-dev \
+    --no-scripts \
+    --no-autoloader \
+    --prefer-dist
+
+# Copy Laravel application
+COPY . .
+
 # Copy Vite build
 COPY --from=assets /app/public/build ./public/build
 
 # Prepare Laravel
-RUN mkdir -p \
-        bootstrap/cache \
+RUN composer dump-autoload --optimize \
+    && mkdir -p \
         storage/framework/sessions \
         storage/framework/views \
         storage/framework/cache \
         storage/logs \
-    && chmod -R 775 bootstrap/cache storage \
-    && composer dump-autoload --optimize
+        bootstrap/cache \
+    && chmod -R 775 storage bootstrap/cache
 
 # =========================
 # Entrypoint
@@ -54,3 +114,5 @@ RUN chmod +x /entrypoint.sh
 EXPOSE 8080
 
 ENTRYPOINT ["/entrypoint.sh"]
+
+ini isinya 
