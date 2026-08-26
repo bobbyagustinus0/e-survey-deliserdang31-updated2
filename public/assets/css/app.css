@@ -1,23 +1,58 @@
+/* =========================================================
+   E-SURVEY DELI SERDANG — DESIGN SYSTEM
+   Palet: hijau kelembagaan + emas, tipografi Newsreader + Plus Jakarta Sans
+   ========================================================= */
+
 :root {
-    --brand-primary: #0d6e3f;
-    --brand-primary-dark: #094f2c;
-    --brand-gold: #c99a2e;
-    --sidebar-width: 260px;
+    /* Warna inti */
+    --ink: #1B1F1C;
+    --ink-soft: #020a05;
+    --paper: #F7F5EF;
+    --paper-raised: #FFFFFF;
+    --line: #E4E0D4;
+
+    --brand-primary: #0B5D39;
+    --brand-primary-dark: #073B24;
+    --brand-primary-tint: #E9F3EC;
+    --brand-gold: #B9862E;
+    --brand-gold-light: #E7A94C;
+    --brand-gold-tint: #FBF3E3;
+
+    --danger: #B3261E;
+    --info: #1F6FB2;
+
+    --sidebar-width: 264px;
+    --radius-sm: 8px;
+    --radius-md: 14px;
+    --radius-lg: 22px;
+    --shadow-soft: 0 10px 30px -12px rgba(11, 93, 57, .18);
+    --shadow-card: 0 4px 16px rgba(27, 31, 26, .06);
 }
 
 * { box-sizing: border-box; }
 
 body {
-    background: #f4f6f8;
-    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+    -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3, h4, h5, h6, .font-display {
+    font-family: 'Newsreader', Georgia, serif;
+    letter-spacing: -0.01em;
 }
 
 .wrapper { min-height: 100vh; }
 
-/* Sidebar */
+a { color: var(--brand-primary); }
+
+/* =========================================================
+   Sidebar & Topbar (dipakai di semua halaman admin)
+   ========================================================= */
 .sidebar {
     width: var(--sidebar-width);
-    background: linear-gradient(180deg, var(--brand-primary) 0%, var(--brand-primary-dark) 100%);
+    background: linear-gradient(190deg, var(--brand-primary) 0%, var(--brand-primary-dark) 100%);
     color: #fff;
     min-height: 100vh;
     position: sticky;
@@ -30,83 +65,135 @@ body {
 .sidebar-brand {
     display: flex;
     align-items: center;
-    gap: .75rem;
-    padding: 1.25rem 1.25rem;
-    border-bottom: 1px solid rgba(255,255,255,.15);
+    gap: .8rem;
+    padding: 1.5rem 1.35rem;
+    border-bottom: 1px solid rgba(255,255,255,.14);
 }
-.sidebar-brand i { font-size: 1.8rem; color: var(--brand-gold); }
-.brand-title { font-weight: 700; font-size: 1.05rem; line-height: 1.1; }
-.brand-sub { font-size: .75rem; opacity: .8; }
+.sidebar-brand i {
+    font-size: 1.6rem;
+    color: var(--brand-primary-dark);
+    background: linear-gradient(135deg, var(--brand-gold-light), var(--brand-gold));
+    width: 44px; height: 44px;
+    display: flex; align-items: center; justify-content: center;
+    border-radius: 12px;
+    flex-shrink: 0;
+}
+.brand-title { font-family: 'Newsreader', serif; font-weight: 600; font-size: 1.15rem; line-height: 1.15; }
+.brand-sub { font-size: .74rem; opacity: .78; letter-spacing: .03em; text-transform: uppercase; }
 
-.sidebar-nav { padding: .75rem; display: flex; flex-direction: column; gap: .15rem; }
+.sidebar-nav { padding: 1rem .85rem; display: flex; flex-direction: column; gap: .2rem; }
 .sidebar-nav .nav-link {
-    color: rgba(255,255,255,.88);
-    padding: .65rem .9rem;
-    border-radius: 8px;
-    font-size: .92rem;
+    color: rgba(255,255,255,.82);
+    padding: .68rem .9rem;
+    border-radius: 10px;
+    font-size: .9rem;
     display: flex;
     align-items: center;
-    gap: .6rem;
+    gap: .65rem;
+    transition: background .15s, color .15s;
 }
 .sidebar-nav .nav-link i { font-size: 1.05rem; width: 20px; text-align: center; }
-.sidebar-nav .nav-link:hover { background: rgba(255,255,255,.12); color: #fff; }
-.sidebar-nav .nav-link.active { background: var(--brand-gold); color: #1a1a1a; font-weight: 600; }
-.logout-btn { color: #ffb4b4 !important; }
-.logout-btn:hover { background: rgba(220,53,69,.2) !important; color: #fff !important; }
+.sidebar-nav .nav-link:hover { background: rgba(255,255,255,.1); color: #fff; }
+.sidebar-nav .nav-link.active {
+    background: linear-gradient(135deg, var(--brand-gold-light), var(--brand-gold));
+    color: var(--brand-primary-dark);
+    font-weight: 700;
+    box-shadow: 0 4px 12px rgba(0,0,0,.15);
+}
+.logout-btn { color: #ffb4ac !important; }
+.logout-btn:hover { background: rgba(220,53,69,.18) !important; color: #fff !important; }
 
-/* Topbar */
 .topbar {
-    background: #fff;
-    padding: .85rem 1.5rem;
-    border-bottom: 1px solid #e5e7eb;
+    background: var(--paper-raised);
+    padding: .95rem 1.75rem;
+    border-bottom: 1px solid var(--line);
     position: sticky;
     top: 0;
     z-index: 20;
 }
-.topbar-title { font-weight: 600; color: #1f2937; }
+.topbar-title { font-family: 'Newsreader', serif; font-weight: 600; color: var(--ink); font-size: 1.15rem; }
 
-.main-content { padding: 1.5rem; }
+.main-content { padding: 1.75rem; }
 
-/* Cegah swipe ke ujung tabel yang bisa discroll horizontal memicu
-   gestur "kembali/maju halaman" bawaan browser (panah besar hitam/biru) */
 .table-responsive { overscroll-behavior-x: contain; }
 
-/* Cards */
+/* =========================================================
+   Kartu, badge, tombol — komponen umum
+   ========================================================= */
 .stat-card {
     border: none;
-    border-radius: 14px;
+    border-radius: var(--radius-md);
     color: #fff;
-    padding: 1.25rem 1.4rem;
-    box-shadow: 0 6px 18px rgba(0,0,0,.08);
+    padding: 1.4rem 1.5rem;
+    box-shadow: var(--shadow-soft);
+    position: relative;
+    overflow: hidden;
 }
-.stat-card .stat-icon { font-size: 2rem; opacity: .85; }
-.stat-card .stat-value { font-size: 1.9rem; font-weight: 700; }
-.stat-card .stat-label { font-size: .82rem; opacity: .9; }
+.stat-card::after {
+    content: "";
+    position: absolute; inset: 0;
+    background: radial-gradient(circle at 100% 0%, rgba(255,255,255,.16), transparent 60%);
+}
+.stat-card .stat-icon { font-size: 1.9rem; opacity: .9; }
+.stat-card .stat-value { font-family: 'Newsreader', serif; font-size: 2.1rem; font-weight: 600; }
+.stat-card .stat-label { font-size: .8rem; opacity: .92; letter-spacing: .01em; }
 
-.bg-grad-green { background: linear-gradient(135deg, #0d6e3f, #14a463); }
-.bg-grad-gold { background: linear-gradient(135deg, #c99a2e, #e0b84a); }
-.bg-grad-blue { background: linear-gradient(135deg, #1f6fb2, #3d92d8); }
-.bg-grad-purple { background: linear-gradient(135deg, #6a3fb2, #9163d8); }
+.bg-grad-green { background: linear-gradient(135deg, #0B5D39, #16875A); }
+.bg-grad-gold { background: linear-gradient(135deg, #B9862E, #E7A94C); }
+.bg-grad-blue { background: linear-gradient(135deg, #1F6FB2, #3D92D8); }
+.bg-grad-purple { background: linear-gradient(135deg, #6A3FB2, #9163D8); }
 
-.card { border: none; border-radius: 14px; box-shadow: 0 4px 14px rgba(0,0,0,.05); }
-.card-header { background: #fff; border-bottom: 1px solid #eef0f2; font-weight: 600; border-radius: 14px 14px 0 0 !important; }
+.card {
+    border: 1px solid var(--line);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-card);
+}
+.card-header {
+    background: var(--paper-raised);
+    border-bottom: 1px solid var(--line);
+    font-weight: 600;
+    border-radius: var(--radius-md) var(--radius-md) 0 0 !important;
+}
 
-.badge-ikm-a { background:#0d6e3f; }
-.badge-ikm-b { background:#2e8b57; }
-.badge-ikm-c { background:#c99a2e; }
-.badge-ikm-d { background:#c0392b; }
+.btn { border-radius: 10px; font-weight: 600; letter-spacing: .01em; }
+.btn-success {
+    background: var(--brand-primary);
+    border-color: var(--brand-primary);
+}
+.btn-success:hover, .btn-success:active {
+    background: var(--brand-primary-dark) !important;
+    border-color: var(--brand-primary-dark) !important;
+}
+.btn-outline-secondary { border-color: var(--line); color: var(--ink-soft); }
 
-/* Public survey page */
+.badge-ikm-a { background: var(--brand-primary); }
+.badge-ikm-b { background: #2E8B57; }
+.badge-ikm-c { background: var(--brand-gold); }
+.badge-ikm-d { background: var(--danger); }
+
+/* =========================================================
+   Halaman publik: daftar survei
+   ========================================================= */
 .public-survey-wrap {
-    max-width: 760px;
+    max-width: 780px;
     margin: 0 auto;
     padding: 2rem 1rem;
 }
+.survey-pick-card {
+    border: 1px solid var(--line);
+    border-radius: var(--radius-md);
+    transition: box-shadow .18s, transform .18s;
+}
+.survey-pick-card:hover {
+    box-shadow: var(--shadow-soft);
+    transform: translateY(-2px);
+}
+
 .scale-option { cursor: pointer; }
 .scale-option input { display:none; }
 .scale-option .scale-box {
-    border: 2px solid #dfe3e6;
-    border-radius: 10px;
+    border: 2px solid var(--line);
+    border-radius: var(--radius-sm);
     padding: .6rem .4rem;
     text-align: center;
     font-size: .85rem;
@@ -114,12 +201,12 @@ body {
 }
 .scale-option input:checked + .scale-box {
     border-color: var(--brand-primary);
-    background: #eafaf1;
+    background: var(--brand-primary-tint);
     color: var(--brand-primary-dark);
     font-weight: 600;
 }
 
-/* Rating bintang (star rating) */
+/* Rating bintang */
 .star-rating-row {
     display: flex;
     justify-content: space-between;
@@ -136,38 +223,49 @@ body {
     flex: 1;
     min-width: 70px;
     padding: .5rem .25rem;
-    border-radius: 10px;
+    border-radius: var(--radius-sm);
     transition: background .15s;
 }
-.star-rating-item:hover { background: #f5f7f5; }
+.star-rating-item:hover { background: var(--brand-gold-tint); }
 .star-rating-item input { display: none; }
 .star-rating-item .star-icon {
     font-size: 1.9rem;
-    color: #d8dde0;
+    color: #D8DDD3;
     transition: color .15s, transform .1s;
 }
 .star-rating-item:hover .star-icon,
-.star-rating-item .star-icon.filled {
-    color: #f5a623;
+.star-rating-item .star-icon.filled { color: var(--brand-gold); }
+.star-rating-item input:checked + .star-icon { color: var(--brand-gold); transform: scale(1.08); }
+.star-rating-item input:checked + .star-icon::before { content: "\f586"; }
+.star-rating-item .star-label { font-size: .78rem; color: var(--ink-soft); text-align: center; }
+.star-rating-item input:checked ~ .star-label { font-weight: 700; color: var(--ink); }
+
+/* Progress step form survei */
+.survey-progress { display: flex; align-items: flex-start; margin-bottom: 1.75rem; }
+.step-dot-wrap { position: relative; flex: 1; text-align: center; }
+.step-dot-wrap .step-line {
+    position: absolute; top: 15px; left: -50%; width: 100%; height: 2px;
+    background: var(--line); z-index: 0;
 }
-.star-rating-item input:checked + .star-icon {
-    color: #f5a623;
+.step-dot-wrap:first-child .step-line { display: none; }
+.step-dot {
+    width: 32px; height: 32px; border-radius: 50%;
+    background: var(--paper-raised); border: 2px solid var(--line);
+    display: flex; align-items: center; justify-content: center;
+    margin: 0 auto; font-weight: 700; font-size: .85rem; color: var(--ink-soft);
+    position: relative; z-index: 1;
 }
-.star-rating-item input:checked + .star-icon::before {
-    content: "\f586"; /* bi-star-fill */
+.step-dot-wrap.active .step-dot,
+.step-dot-wrap.done .step-dot {
+    background: var(--brand-primary); border-color: var(--brand-primary); color: #fff;
 }
-.star-rating-item .star-label {
-    font-size: .78rem;
-    color: #495057;
-    text-align: center;
-}
-.star-rating-item input:checked ~ .star-label {
-    font-weight: 700;
-    color: #1a1a1a;
-}
+.step-dot-wrap.done .step-line { background: var(--brand-primary); }
+.step-label { font-size: .72rem; margin-top: .35rem; color: var(--ink-soft); }
+.step-dot-wrap.active .step-label { color: var(--brand-primary-dark); font-weight: 700; }
+.step-title { font-family: 'Newsreader', serif; font-size: 1.3rem; font-weight: 600; margin-bottom: .15rem; }
+.step-subtitle { color: var(--ink-soft); font-size: .88rem; margin-bottom: 1.1rem; }
 
 @media (max-width: 991px) {
     .sidebar { position: fixed; left: 0; z-index: 40; margin-left: calc(-1 * var(--sidebar-width)); height: 100vh; }
     .sidebar.show { margin-left: 0; }
 }
-

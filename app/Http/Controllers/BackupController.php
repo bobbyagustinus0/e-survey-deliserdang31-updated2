@@ -5,68 +5,160 @@ namespace App\Http\Controllers;
 use App\Models\BackupLog;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\File;
-use Symfony\Component\Process\Process;
 
 class BackupController extends Controller
 {
     protected string $backupPath = 'app/backups';
 
+    protected string $mysqlBin = 'C:\\xampp\\mysql\\bin';
+
     public function index()
     {
         $dir = storage_path($this->backupPath);
+
         if (!File::exists($dir)) {
             File::makeDirectory($dir, 0755, true);
         }
 
         $files = collect(File::files($dir))
-            ->sortByDesc(fn($f) => $f->getMTime())
-            ->map(fn($f) => [
+            ->sortByDesc(fn ($f) => $f->getMTime())
+            ->map(fn ($f) => [
                 'nama' => $f->getFilename(),
                 'ukuran' => round($f->getSize() / 1024, 2) . ' KB',
                 'tanggal' => date('d-m-Y H:i:s', $f->getMTime()),
             ]);
 
-        $logs = BackupLog::with('user')->latest()->take(20)->get();
+        $logs = BackupLog::with('user')
+            ->latest()
+            ->take(20)
+            ->get();
 
         return view('backup.index', compact('files', 'logs'));
     }
 
     /**
-     * Backup database menggunakan mysqldump (pastikan mysqldump ada di PATH -> XAMPP/Herd biasanya sudah tersedia).
+     * BACKUP DATABASE
      */
     public function backup(Request $request)
     {
         $dir = storage_path($this->backupPath);
+
         if (!File::exists($dir)) {
             File::makeDirectory($dir, 0755, true);
         }
 
-        $filename = 'backup-' . config('database.connections.mysql.database') . '-' . now()->format('Ymd_His') . '.sql';
-        $filepath = $dir . DIRECTORY_SEPARATOR . $filename;
-
         $db = config('database.connections.mysql');
 
-        $command = [
-            'mysqldump',
-            '-h', $db['host'],
-            '-P', (string) $db['port'],
-            '-u', $db['username'],
-        ];
-        if (!empty($db['password'])) {
-            $command[] = '-p' . $db['password'];
-        }
-        $command[] = $db['database'];
+        $filename = 'backup-' .
+            $db['database'] .
+            '-' .
+            now()->format('Ymd_His') .
+            '.sql';
 
-        $process = new Process($command);
-        $process->setTimeout(300);
+        $filepath = $dir . DIRECTORY_SEPARATOR . $filename;
+
+        $mysqldump = $this->mysqlBin . '\\mysqldump.exe';
 
         try {
-            $process->mustRun(function ($type, $buffer) use ($filepath) {
-                if ($type === Process::OUT) {
-                    File::append($filepath, $buffer);
-                }
-            });
 
+            /*
+             * Pastikan mysqldump ada.
+             */
+            if (!File::exists($mysqldump)) {
+                throw new \Exception(
+                    'mysqldump.exe tidak ditemukan: ' . $mysqldump
+                );
+            }
+
+            /*
+             * Ambil konfigurasi database.
+             */
+            $host = $db['host'] ?: '127.0.0.1';
+            $port = $db['port'] ?: 3306;
+            $username = $db['username'];
+            $password = $db['password'] ?? '';
+            $database = $db['database'];
+
+            /*
+             * Escape untuk CMD Windows.
+             */
+            $mysqldumpEscaped = '"' . $mysqldump . '"';
+
+            /*
+             * Password.
+             */
+            $passwordOption = '';
+
+            if ($password !== '') {
+                $passwordOption = ' -p' . escapeshellarg($password);
+            }
+
+            /*
+             * Command yang sama seperti command
+             * yang terbukti berhasil di PowerShell.
+             */
+            $command =
+                $mysqldumpEscaped .
+                ' -h ' . escapeshellarg($host) .
+                ' -P ' . escapeshellarg((string) $port) .
+                ' -u ' . escapeshellarg($username) .
+                $passwordOption .
+                ' ' . escapeshellarg($database) .
+                ' > ' . escapeshellarg($filepath) .
+                ' 2>&1';
+
+            /*
+             * Jalankan menggunakan CMD Windows.
+             */
+            $fullCommand = 'cmd.exe /C "' . $command . '"';
+
+            $output = [];
+            $exitCode = 0;
+
+            exec($fullCommand, $output, $exitCode);
+
+            /*
+             * Jika gagal.
+             */
+            if ($exitCode !== 0) {
+
+                if (File::exists($filepath)) {
+                    File::delete($filepath);
+                }
+
+                $error = implode(PHP_EOL, $output);
+
+                throw new \Exception(
+                    'mysqldump gagal dengan kode ' .
+                    $exitCode .
+                    ($error ? ': ' . $error : '')
+                );
+            }
+
+            /*
+             * Pastikan file dibuat.
+             */
+            if (!File::exists($filepath)) {
+                throw new \Exception(
+                    'File backup tidak berhasil dibuat.'
+                );
+            }
+
+            /*
+             * Pastikan file tidak kosong.
+             */
+            if (File::size($filepath) <= 0) {
+
+                File::delete($filepath);
+
+                throw new \Exception(
+                    'File backup kosong.'
+                );
+            }
+
+            /*
+             * Simpan log sukses.
+             */
             BackupLog::create([
                 'nama_file' => $filename,
                 'jenis' => 'backup',
@@ -75,8 +167,17 @@ class BackupController extends Controller
                 'keterangan' => 'Backup database berhasil dibuat.',
             ]);
 
-            return back()->with('success', "Backup database berhasil dibuat: $filename");
+            return back()->with(
+                'success',
+                'Backup database berhasil dibuat: ' . $filename
+            );
+
         } catch (\Throwable $e) {
+
+            if (File::exists($filepath)) {
+                File::delete($filepath);
+            }
+
             BackupLog::create([
                 'nama_file' => $filename,
                 'jenis' => 'backup',
@@ -85,28 +186,52 @@ class BackupController extends Controller
                 'keterangan' => $e->getMessage(),
             ]);
 
-            return back()->with('error', 'Backup gagal. Pastikan mysqldump tersedia di PATH sistem anda. Detail: ' . $e->getMessage());
+            return back()->with(
+                'error',
+                'Backup gagal: ' . $e->getMessage()
+            );
         }
-    }
-
-    public function download(string $filename)
-    {
-        $filepath = storage_path($this->backupPath . DIRECTORY_SEPARATOR . $filename);
-        abort_unless(File::exists($filepath), 404);
-        return response()->download($filepath);
-    }
-
-    public function destroy(string $filename)
-    {
-        $filepath = storage_path($this->backupPath . DIRECTORY_SEPARATOR . $filename);
-        if (File::exists($filepath)) {
-            File::delete($filepath);
-        }
-        return back()->with('success', 'File backup berhasil dihapus.');
     }
 
     /**
-     * Restore database dari file .sql yang diupload.
+     * DOWNLOAD BACKUP
+     */
+    public function download(string $filename)
+    {
+        $filename = basename($filename);
+
+        $filepath = storage_path(
+            $this->backupPath . DIRECTORY_SEPARATOR . $filename
+        );
+
+        abort_unless(File::exists($filepath), 404);
+
+        return response()->download($filepath);
+    }
+
+    /**
+     * DELETE BACKUP
+     */
+    public function destroy(string $filename)
+    {
+        $filename = basename($filename);
+
+        $filepath = storage_path(
+            $this->backupPath . DIRECTORY_SEPARATOR . $filename
+        );
+
+        if (File::exists($filepath)) {
+            File::delete($filepath);
+        }
+
+        return back()->with(
+            'success',
+            'File backup berhasil dihapus.'
+        );
+    }
+
+    /**
+     * RESTORE DATABASE
      */
     public function restore(Request $request)
     {
@@ -115,27 +240,71 @@ class BackupController extends Controller
         ]);
 
         $uploaded = $request->file('file_restore');
+
         $tmpPath = $uploaded->getRealPath();
 
         $db = config('database.connections.mysql');
 
-        $command = [
-            'mysql',
-            '-h', $db['host'],
-            '-P', (string) $db['port'],
-            '-u', $db['username'],
-        ];
-        if (!empty($db['password'])) {
-            $command[] = '-p' . $db['password'];
-        }
-        $command[] = $db['database'];
-
-        $process = new Process($command);
-        $process->setInput(File::get($tmpPath));
-        $process->setTimeout(300);
+        $mysql = $this->mysqlBin . '\\mysql.exe';
 
         try {
-            $process->mustRun();
+
+            if (!File::exists($mysql)) {
+                throw new \Exception(
+                    'mysql.exe tidak ditemukan: ' . $mysql
+                );
+            }
+
+            if (!$tmpPath || !File::exists($tmpPath)) {
+                throw new \Exception(
+                    'File restore tidak ditemukan.'
+                );
+            }
+
+            $host = $db['host'] ?: '127.0.0.1';
+            $port = $db['port'] ?: 3306;
+            $username = $db['username'];
+            $password = $db['password'] ?? '';
+            $database = $db['database'];
+
+            $mysqlEscaped = '"' . $mysql . '"';
+
+            $passwordOption = '';
+
+            if ($password !== '') {
+                $passwordOption = ' -p' . escapeshellarg($password);
+            }
+
+            /*
+             * Restore menggunakan input file.
+             */
+            $command =
+                $mysqlEscaped .
+                ' -h ' . escapeshellarg($host) .
+                ' -P ' . escapeshellarg((string) $port) .
+                ' -u ' . escapeshellarg($username) .
+                $passwordOption .
+                ' ' . escapeshellarg($database) .
+                ' < ' . escapeshellarg($tmpPath) .
+                ' 2>&1';
+
+            $fullCommand = 'cmd.exe /C "' . $command . '"';
+
+            $output = [];
+            $exitCode = 0;
+
+            exec($fullCommand, $output, $exitCode);
+
+            if ($exitCode !== 0) {
+
+                $error = implode(PHP_EOL, $output);
+
+                throw new \Exception(
+                    'mysql restore gagal dengan kode ' .
+                    $exitCode .
+                    ($error ? ': ' . $error : '')
+                );
+            }
 
             BackupLog::create([
                 'nama_file' => $uploaded->getClientOriginalName(),
@@ -145,8 +314,13 @@ class BackupController extends Controller
                 'keterangan' => 'Restore database berhasil dijalankan.',
             ]);
 
-            return back()->with('success', 'Restore database berhasil dijalankan.');
+            return back()->with(
+                'success',
+                'Restore database berhasil dijalankan.'
+            );
+
         } catch (\Throwable $e) {
+
             BackupLog::create([
                 'nama_file' => $uploaded->getClientOriginalName(),
                 'jenis' => 'restore',
@@ -155,7 +329,10 @@ class BackupController extends Controller
                 'keterangan' => $e->getMessage(),
             ]);
 
-            return back()->with('error', 'Restore gagal. Pastikan mysql client tersedia di PATH sistem anda. Detail: ' . $e->getMessage());
+            return back()->with(
+                'error',
+                'Restore gagal: ' . $e->getMessage()
+            );
         }
     }
 }
