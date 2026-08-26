@@ -11,17 +11,18 @@ class BackupController extends Controller
     protected string $backupPath = 'app/backups';
 
     /**
-     * Cari lokasi binary MySQL sesuai OS.
+     * Cari binary MySQL sesuai OS.
      *
      * Windows:
      * C:\xampp\mysql\bin\mysqldump.exe
      *
-     * Linux/Railway:
+     * Linux / Railway:
      * mysqldump dari PATH
      */
     protected function getMysqlBinary(string $binary): string
     {
         if (PHP_OS_FAMILY === 'Windows') {
+
             $paths = [
                 'C:\\xampp\\mysql\\bin\\' . $binary . '.exe',
                 'C:\\xampp\\mysql\\bin\\' . $binary,
@@ -40,7 +41,11 @@ class BackupController extends Controller
         }
 
         // Linux / Railway
-        $binaryPath = trim((string) shell_exec('command -v ' . escapeshellarg($binary)));
+        $binaryPath = trim(
+            (string) shell_exec(
+                'command -v ' . escapeshellarg($binary)
+            )
+        );
 
         if ($binaryPath !== '') {
             return $binaryPath;
@@ -51,6 +56,9 @@ class BackupController extends Controller
         );
     }
 
+    /**
+     * Halaman backup.
+     */
     public function index()
     {
         $dir = storage_path($this->backupPath);
@@ -64,7 +72,10 @@ class BackupController extends Controller
             ->map(fn ($f) => [
                 'nama' => $f->getFilename(),
                 'ukuran' => round($f->getSize() / 1024, 2) . ' KB',
-                'tanggal' => date('d-m-Y H:i:s', $f->getMTime()),
+                'tanggal' => date(
+                    'd-m-Y H:i:s',
+                    $f->getMTime()
+                ),
             ]);
 
         $logs = BackupLog::with('user')
@@ -72,7 +83,10 @@ class BackupController extends Controller
             ->take(20)
             ->get();
 
-        return view('backup.index', compact('files', 'logs'));
+        return view(
+            'backup.index',
+            compact('files', 'logs')
+        );
     }
 
     /**
@@ -88,15 +102,20 @@ class BackupController extends Controller
 
         $db = config('database.connections.mysql');
 
-        $filename = 'backup-' .
+        $filename =
+            'backup-' .
             $db['database'] .
             '-' .
             now()->format('Ymd_His') .
             '.sql';
 
-        $filepath = $dir . DIRECTORY_SEPARATOR . $filename;
+        $filepath =
+            $dir .
+            DIRECTORY_SEPARATOR .
+            $filename;
 
         try {
+
             $mysqldump = $this->getMysqlBinary('mysqldump');
 
             $host = $db['host'] ?: '127.0.0.1';
@@ -106,13 +125,18 @@ class BackupController extends Controller
             $database = $db['database'];
 
             /*
-             * Gunakan environment OS.
+             * ==========================================
+             * WINDOWS / XAMPP
+             * ==========================================
              */
             if (PHP_OS_FAMILY === 'Windows') {
+
                 $passwordOption = '';
 
                 if ($password !== '') {
-                    $passwordOption = ' -p' . escapeshellarg($password);
+                    $passwordOption =
+                        ' -p' .
+                        escapeshellarg($password);
                 }
 
                 $command =
@@ -125,26 +149,45 @@ class BackupController extends Controller
                     ' > ' . escapeshellarg($filepath) .
                     ' 2>&1';
 
-                $fullCommand = 'cmd.exe /C "' . $command . '"';
-            } else {
-                /*
-                 * Linux / Railway
-                 */
+                $fullCommand =
+                    'cmd.exe /C "' .
+                    $command .
+                    '"';
+            }
+
+            /*
+             * ==========================================
+             * LINUX / RAILWAY
+             * ==========================================
+             *
+             * Railway menggunakan MariaDB client.
+             * Error sebelumnya:
+             *
+             * TLS/SSL error:
+             * self-signed certificate in certificate chain
+             *
+             * Karena itu gunakan --skip-ssl.
+             */
+            else {
+
                 $passwordOption = '';
 
                 if ($password !== '') {
-                    $passwordOption = ' --password=' . escapeshellarg($password);
+                    $passwordOption =
+                        ' --password=' .
+                        escapeshellarg($password);
                 }
 
                 $command =
                     escapeshellarg($mysqldump) .
+                    ' --skip-ssl' .
                     ' -h ' . escapeshellarg($host) .
                     ' -P ' . escapeshellarg((string) $port) .
                     ' -u ' . escapeshellarg($username) .
                     $passwordOption .
                     ' ' . escapeshellarg($database) .
                     ' > ' . escapeshellarg($filepath) .
-                    ' 2>&1';
+                    ' 2>/tmp/mysqldump_error.log';
 
                 $fullCommand = $command;
             }
@@ -152,29 +195,67 @@ class BackupController extends Controller
             $output = [];
             $exitCode = 0;
 
-            exec($fullCommand, $output, $exitCode);
+            exec(
+                $fullCommand,
+                $output,
+                $exitCode
+            );
 
+            /*
+             * Jika command gagal.
+             */
             if ($exitCode !== 0) {
 
                 if (File::exists($filepath)) {
                     File::delete($filepath);
                 }
 
-                $error = implode(PHP_EOL, $output);
+                $error = implode(
+                    PHP_EOL,
+                    $output
+                );
+
+                /*
+                 * Ambil error Railway jika ada.
+                 */
+                if (
+                    PHP_OS_FAMILY !== 'Windows' &&
+                    File::exists('/tmp/mysqldump_error.log')
+                ) {
+                    $railwayError = trim(
+                        File::get(
+                            '/tmp/mysqldump_error.log'
+                        )
+                    );
+
+                    if ($railwayError !== '') {
+                        $error .=
+                            ($error ? PHP_EOL : '') .
+                            $railwayError;
+                    }
+                }
 
                 throw new \Exception(
                     'mysqldump gagal dengan kode ' .
                     $exitCode .
-                    ($error ? ': ' . $error : '')
+                    ($error
+                        ? ': ' . $error
+                        : '')
                 );
             }
 
+            /*
+             * Pastikan file backup dibuat.
+             */
             if (!File::exists($filepath)) {
                 throw new \Exception(
                     'File backup tidak berhasil dibuat.'
                 );
             }
 
+            /*
+             * Pastikan file tidak kosong.
+             */
             if (File::size($filepath) <= 0) {
 
                 File::delete($filepath);
@@ -184,17 +265,22 @@ class BackupController extends Controller
                 );
             }
 
+            /*
+             * Simpan log sukses.
+             */
             BackupLog::create([
                 'nama_file' => $filename,
                 'jenis' => 'backup',
                 'user_id' => auth()->id(),
                 'status' => 'sukses',
-                'keterangan' => 'Backup database berhasil dibuat.',
+                'keterangan' =>
+                    'Backup database berhasil dibuat.',
             ]);
 
             return back()->with(
                 'success',
-                'Backup database berhasil dibuat: ' . $filename
+                'Backup database berhasil dibuat: ' .
+                $filename
             );
 
         } catch (\Throwable $e) {
@@ -213,7 +299,8 @@ class BackupController extends Controller
 
             return back()->with(
                 'error',
-                'Backup gagal: ' . $e->getMessage()
+                'Backup gagal: ' .
+                $e->getMessage()
             );
         }
     }
@@ -226,10 +313,15 @@ class BackupController extends Controller
         $filename = basename($filename);
 
         $filepath = storage_path(
-            $this->backupPath . DIRECTORY_SEPARATOR . $filename
+            $this->backupPath .
+            DIRECTORY_SEPARATOR .
+            $filename
         );
 
-        abort_unless(File::exists($filepath), 404);
+        abort_unless(
+            File::exists($filepath),
+            404
+        );
 
         return response()->download($filepath);
     }
@@ -242,7 +334,9 @@ class BackupController extends Controller
         $filename = basename($filename);
 
         $filepath = storage_path(
-            $this->backupPath . DIRECTORY_SEPARATOR . $filename
+            $this->backupPath .
+            DIRECTORY_SEPARATOR .
+            $filename
         );
 
         if (File::exists($filepath)) {
@@ -261,71 +355,117 @@ class BackupController extends Controller
     public function restore(Request $request)
     {
         $request->validate([
-            'file_restore' => 'required|file|mimes:sql,txt|max:51200',
+            'file_restore' =>
+                'required|file|mimes:sql,txt|max:51200',
         ]);
 
-        $uploaded = $request->file('file_restore');
+        $uploaded =
+            $request->file('file_restore');
 
-        $tmpPath = $uploaded->getRealPath();
+        $tmpPath =
+            $uploaded->getRealPath();
 
-        $db = config('database.connections.mysql');
+        $db =
+            config('database.connections.mysql');
 
         try {
-            $mysql = $this->getMysqlBinary('mysql');
 
-            if (!$tmpPath || !File::exists($tmpPath)) {
+            $mysql =
+                $this->getMysqlBinary('mysql');
+
+            if (
+                !$tmpPath ||
+                !File::exists($tmpPath)
+            ) {
                 throw new \Exception(
                     'File restore tidak ditemukan.'
                 );
             }
 
-            $host = $db['host'] ?: '127.0.0.1';
-            $port = $db['port'] ?: 3306;
-            $username = $db['username'];
-            $password = $db['password'] ?? '';
-            $database = $db['database'];
+            $host =
+                $db['host'] ?: '127.0.0.1';
 
+            $port =
+                $db['port'] ?: 3306;
+
+            $username =
+                $db['username'];
+
+            $password =
+                $db['password'] ?? '';
+
+            $database =
+                $db['database'];
+
+            /*
+             * ==========================================
+             * WINDOWS / XAMPP
+             * ==========================================
+             */
             if (PHP_OS_FAMILY === 'Windows') {
 
                 $passwordOption = '';
 
                 if ($password !== '') {
-                    $passwordOption = ' -p' . escapeshellarg($password);
+                    $passwordOption =
+                        ' -p' .
+                        escapeshellarg($password);
                 }
 
                 $command =
                     '"' . $mysql . '"' .
-                    ' -h ' . escapeshellarg($host) .
-                    ' -P ' . escapeshellarg((string) $port) .
-                    ' -u ' . escapeshellarg($username) .
+                    ' -h ' .
+                    escapeshellarg($host) .
+                    ' -P ' .
+                    escapeshellarg((string) $port) .
+                    ' -u ' .
+                    escapeshellarg($username) .
                     $passwordOption .
-                    ' ' . escapeshellarg($database) .
-                    ' < ' . escapeshellarg($tmpPath) .
+                    ' ' .
+                    escapeshellarg($database) .
+                    ' < ' .
+                    escapeshellarg($tmpPath) .
                     ' 2>&1';
 
-                $fullCommand = 'cmd.exe /C "' . $command . '"';
+                $fullCommand =
+                    'cmd.exe /C "' .
+                    $command .
+                    '"';
+            }
 
-            } else {
+            /*
+             * ==========================================
+             * LINUX / RAILWAY
+             * ==========================================
+             *
+             * Sama seperti backup:
+             * gunakan --skip-ssl
+             */
+            else {
 
-                /*
-                 * Linux / Railway
-                 */
                 $passwordOption = '';
 
                 if ($password !== '') {
                     $passwordOption =
-                        ' --password=' . escapeshellarg($password);
+                        ' --password=' .
+                        escapeshellarg($password);
                 }
 
                 $command =
                     escapeshellarg($mysql) .
-                    ' -h ' . escapeshellarg($host) .
-                    ' -P ' . escapeshellarg((string) $port) .
-                    ' -u ' . escapeshellarg($username) .
+                    ' --skip-ssl' .
+                    ' -h ' .
+                    escapeshellarg($host) .
+                    ' -P ' .
+                    escapeshellarg((string) $port) .
+                    ' -u ' .
+                    escapeshellarg($username) .
                     $passwordOption .
-                    ' ' . escapeshellarg($database) .
-                    ' < ' . escapeshellarg($tmpPath) .
-                    ' 2>&1';
+                    ' ' .
+                    escapeshellarg($database) .
+                    ' < ' .
+                    escapeshellarg($tmpPath) .
+                    ' 2>/tmp/mysql_restore_error.log';
 
                 $fullCommand = $command;
             }
@@ -333,25 +473,58 @@ class BackupController extends Controller
             $output = [];
             $exitCode = 0;
 
-            exec($fullCommand, $output, $exitCode);
+            exec(
+                $fullCommand,
+                $output,
+                $exitCode
+            );
 
             if ($exitCode !== 0) {
 
-                $error = implode(PHP_EOL, $output);
+                $error =
+                    implode(
+                        PHP_EOL,
+                        $output
+                    );
+
+                /*
+                 * Ambil error Railway jika ada.
+                 */
+                if (
+                    PHP_OS_FAMILY !== 'Windows' &&
+                    File::exists('/tmp/mysql_restore_error.log')
+                ) {
+                    $railwayError =
+                        trim(
+                            File::get(
+                                '/tmp/mysql_restore_error.log'
+                            )
+                        );
+
+                    if ($railwayError !== '') {
+                        $error .=
+                            ($error ? PHP_EOL : '') .
+                            $railwayError;
+                    }
+                }
 
                 throw new \Exception(
                     'mysql restore gagal dengan kode ' .
                     $exitCode .
-                    ($error ? ': ' . $error : '')
+                    ($error
+                        ? ': ' . $error
+                        : '')
                 );
             }
 
             BackupLog::create([
-                'nama_file' => $uploaded->getClientOriginalName(),
+                'nama_file' =>
+                    $uploaded->getClientOriginalName(),
                 'jenis' => 'restore',
                 'user_id' => auth()->id(),
                 'status' => 'sukses',
-                'keterangan' => 'Restore database berhasil dijalankan.',
+                'keterangan' =>
+                    'Restore database berhasil dijalankan.',
             ]);
 
             return back()->with(
@@ -362,7 +535,8 @@ class BackupController extends Controller
         } catch (\Throwable $e) {
 
             BackupLog::create([
-                'nama_file' => $uploaded->getClientOriginalName(),
+                'nama_file' =>
+                    $uploaded->getClientOriginalName(),
                 'jenis' => 'restore',
                 'user_id' => auth()->id(),
                 'status' => 'gagal',
@@ -371,7 +545,8 @@ class BackupController extends Controller
 
             return back()->with(
                 'error',
-                'Restore gagal: ' . $e->getMessage()
+                'Restore gagal: ' .
+                $e->getMessage()
             );
         }
     }
