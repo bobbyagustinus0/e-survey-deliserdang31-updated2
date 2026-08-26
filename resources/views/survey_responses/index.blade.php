@@ -1270,9 +1270,13 @@
                     <table class="table table-premium">
                         <thead>
                             <tr>
-                                <th style="min-width:120px;"><i class="bi bi-person me-1"></i>Responden</th>
+                                @if($tampilkanKolomResponden)
+                                    <th style="min-width:120px;"><i class="bi bi-person me-1"></i>Responden</th>
+                                @endif
                                 <th style="min-width:150px;"><i class="bi bi-file-text me-1"></i>Survei</th>
-                                <th style="min-width:130px;"><i class="bi bi-envelope me-1"></i>Email</th>
+                                @if($tampilkanKolomEmail)
+                                    <th style="min-width:130px;"><i class="bi bi-envelope me-1"></i>Email</th>
+                                @endif
                                 @foreach ($kolomField as $f)
                                     <th style="min-width:100px;">
                                         <i class="bi bi-tag me-1"></i>{{ $f->label }}
@@ -1287,22 +1291,26 @@
                         <tbody>
                             @forelse ($responses as $r)
                                 <tr>
-                                    <td>
-                                        <span class="responden-name">
-                                            {{ $r->nama_responden ?: 'Anonim' }}
-                                        </span>
-                                        @if(!$r->nama_responden)
-                                            <span class="badge-premium" style="background:rgba(108,117,125,0.08);color:#6c757d;font-size:0.55rem;padding:0.1rem 0.4rem;border-radius:50px;margin-left:0.2rem;">
-                                                <i class="bi bi-incognito"></i>
+                                    @if($tampilkanKolomResponden)
+                                        <td>
+                                            <span class="responden-name">
+                                                {{ $r->nama_responden ?: 'Anonim' }}
                                             </span>
-                                        @endif
-                                    </td>
+                                            @if(!$r->nama_responden)
+                                                <span class="badge-premium" style="background:rgba(108,117,125,0.08);color:#6c757d;font-size:0.55rem;padding:0.1rem 0.4rem;border-radius:50px;margin-left:0.2rem;">
+                                                    <i class="bi bi-incognito"></i>
+                                                </span>
+                                            @endif
+                                        </td>
+                                    @endif
                                     <td>
                                         <span class="survey-title" title="{{ $r->template->judul_survei ?? '-' }}">
                                             {{ $r->template->judul_survei ?? '-' }}
                                         </span>
                                     </td>
-                                    <td class="email-cell">{{ $r->email ?: '-' }}</td>
+                                    @if($tampilkanKolomEmail)
+                                        <td class="email-cell">{{ $r->email ?: '-' }}</td>
+                                    @endif
                                     @foreach ($kolomField as $f)
                                         <td>{{ data_get($r->data_tambahan, $f->field_key) ?: '-' }}</td>
                                     @endforeach
@@ -1349,7 +1357,7 @@
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="{{ 7 + $kolomField->count() }}">
+                                    <td colspan="{{ 5 + ($tampilkanKolomResponden ? 1 : 0) + ($tampilkanKolomEmail ? 1 : 0) + $kolomField->count() }}">
                                         <div class="empty-state-table">
                                             <i class="bi bi-inbox"></i>
                                             <h6>Belum Ada Respon Survei</h6>
