@@ -1,30 +1,25 @@
 <?php
 
-use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\AdminUserController;
+use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\BackupController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DocumentationController;
 use App\Http\Controllers\IntegrationController;
+use App\Http\Controllers\PublicUserController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\RoleController;
 use App\Http\Controllers\SettingController;
-use App\Http\Controllers\SurveyQuestionController;
 use App\Http\Controllers\SurveyIdentityFieldController;
+use App\Http\Controllers\SurveyQuestionController;
 use App\Http\Controllers\SurveyResponseController;
 use App\Http\Controllers\SurveyTemplateController;
 use App\Http\Controllers\UserSurveyController;
-use App\Http\Controllers\PublicUserController;
 use Illuminate\Support\Facades\Route;
-
-
-
-
 
 Route::get('/', function () {
     return view('welcome');
 })->name('welcome');
-
 
 
 
