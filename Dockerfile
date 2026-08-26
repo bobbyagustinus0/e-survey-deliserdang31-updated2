@@ -19,18 +19,21 @@ RUN npm run build
 # =========================
 # Stage 2: Laravel PHP
 # =========================
-FROM php:8.4-cli-alpine
+FROM php:8.4-cli
 
-# Install system dependencies + PHP extensions
-RUN apk add --no-cache \
+# =========================
+# Install system dependencies
+# =========================
+RUN apt-get update && apt-get install -y \
     git \
     curl \
     zip \
     unzip \
     libpng-dev \
     libzip-dev \
-    oniguruma-dev \
-    icu-dev \
+    libonig-dev \
+    libicu-dev \
+    default-mysql-client \
     && docker-php-ext-install \
     pdo_mysql \
     mbstring \
@@ -39,14 +42,21 @@ RUN apk add --no-cache \
     bcmath \
     gd \
     zip \
-    intl
+    intl \
+    && rm -rf /var/lib/apt/lists/*
 
+
+# =========================
 # Install Composer
+# =========================
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
 WORKDIR /var/www/html
 
-# Install Composer dependencies
+
+# =========================
+# Install Laravel dependencies
+# =========================
 COPY composer.json composer.lock ./
 
 RUN composer install \
@@ -55,13 +65,22 @@ RUN composer install \
     --no-autoloader \
     --prefer-dist
 
+
+# =========================
 # Copy Laravel application
+# =========================
 COPY . .
 
+
+# =========================
 # Copy Vite build
+# =========================
 COPY --from=assets /app/public/build ./public/build
 
+
+# =========================
 # Prepare Laravel
+# =========================
 RUN mkdir -p \
         storage/framework/sessions \
         storage/framework/views \
@@ -71,6 +90,15 @@ RUN mkdir -p \
     && chmod -R 775 storage bootstrap/cache \
     && composer dump-autoload --optimize
 
+
+# =========================
+# Check MySQL dump client
+# =========================
+RUN echo "Checking MySQL client..." \
+    && which mysqldump \
+    && mysqldump --version
+
+
 # =========================
 # Entrypoint
 # =========================
@@ -78,46 +106,101 @@ RUN cat <<'EOF' > /entrypoint.sh
 #!/bin/sh
 set -e
 
+echo "======================================"
 echo "Starting Laravel..."
+echo "======================================"
 
-# Ensure .env file exists (Railway uses env vars, but artisan needs a file to write to)
+
+# =========================
+# Ensure .env exists
+# =========================
 if [ ! -f .env ]; then
     echo ".env not found, creating empty one..."
     touch .env
 fi
 
-# Generate APP_KEY only if it doesn't exist
+
+# =========================
+# Check APP_KEY
+# =========================
 if [ -z "$APP_KEY" ]; then
     echo "APP_KEY is missing, generating..."
     php artisan key:generate --force
+else
+    echo "APP_KEY exists."
 fi
 
-# Create storage link
+
+# =========================
+# Storage link
+# =========================
+echo "Creating storage link..."
+
 php artisan storage:link || true
 
-# Run database migrations first (creates tables like `cache` that
-# optimize:clear / config:cache below may depend on)
+
+# =========================
+# Database migration
+# =========================
+echo "Running database migrations..."
+
 php artisan migrate --force
 
-# Clear old Laravel caches
+
+# =========================
+# Clear Laravel cache
+# =========================
+echo "Clearing Laravel cache..."
+
 php artisan optimize:clear
 
-# Cache configuration and routes
+
+# =========================
+# Cache configuration
+# =========================
+echo "Caching Laravel configuration..."
+
 php artisan config:cache
+
+
+# =========================
+# Cache routes
+# =========================
+echo "Caching Laravel routes..."
+
 php artisan route:cache
 
+
+# =========================
 # Railway PORT
+# =========================
 PORT="${PORT:-8080}"
 
-echo "Starting Laravel on port $PORT..."
+echo "======================================"
+echo "Laravel is starting..."
+echo "Port: $PORT"
+echo "======================================"
 
+
+# =========================
+# Start Laravel
+# =========================
 exec php artisan serve \
     --host=0.0.0.0 \
     --port="$PORT"
 EOF
 
+
 RUN chmod +x /entrypoint.sh
 
+
+# =========================
+# Railway port
+# =========================
 EXPOSE 8080
 
+
+# =========================
+# Start container
+# =========================
 ENTRYPOINT ["/entrypoint.sh"]
