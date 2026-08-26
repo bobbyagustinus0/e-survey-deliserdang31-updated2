@@ -10,8 +10,18 @@ class SurveyResponse extends Model
     use HasFactory;
 
     protected $fillable = [
-        'survey_template_id', 'user_id', 'nama_responden', 'email', 'no_hp', 'jenis_kelamin',
-        'usia', 'pekerjaan', 'data_tambahan', 'nilai_ikm', 'ip_address', 'tanggal_isi',
+        'survey_template_id',
+        'user_id',
+        'nama_responden',
+        'email',
+        'no_hp',
+        'jenis_kelamin',
+        'usia',
+        'pekerjaan',
+        'data_tambahan',
+        'nilai_ikm',
+        'ip_address',
+        'tanggal_isi',
     ];
 
     protected $casts = [
@@ -19,34 +29,73 @@ class SurveyResponse extends Model
         'data_tambahan' => 'array',
     ];
 
-    public function surveyCreator()
-{
-    return $this->hasOneThrough(
-        User::class,
-        SurveyTemplate::class,
-        'id',
-        'id',
-        'survey_template_id',
-        'created_by'
-    );
-}
+    /**
+     * Relasi ke SurveyTemplate
+     */
+    public function template()
+    {
+        return $this->belongsTo(
+            SurveyTemplate::class,
+            'survey_template_id'
+        );
+    }
 
+    /**
+     * Relasi ke User yang mengisi survei
+     */
     public function user()
     {
-        return $this->belongsTo(User::class);
+        return $this->belongsTo(
+            User::class,
+            'user_id'
+        );
     }
 
+    /**
+     * Relasi ke jawaban survei
+     */
     public function answers()
     {
-        return $this->hasMany(SurveyAnswer::class);
+        return $this->hasMany(
+            SurveyAnswer::class,
+            'survey_response_id'
+        );
     }
 
+    /**
+     * User yang membuat survey template
+     */
+    public function surveyCreator()
+    {
+        return $this->hasOneThrough(
+            User::class,
+            SurveyTemplate::class,
+            'id',
+            'id',
+            'survey_template_id',
+            'created_by'
+        );
+    }
+
+    /**
+     * Kategori mutu berdasarkan nilai IKM
+     */
     public function kategoriMutu(): string
     {
         $n = $this->nilai_ikm ?? 0;
-        if ($n >= 88.31) return 'A (Sangat Baik)';
-        if ($n >= 76.61) return 'B (Baik)';
-        if ($n >= 65.00) return 'C (Kurang Baik)';
+
+        if ($n >= 88.31) {
+            return 'A (Sangat Baik)';
+        }
+
+        if ($n >= 76.61) {
+            return 'B (Baik)';
+        }
+
+        if ($n >= 65.00) {
+            return 'C (Kurang Baik)';
+        }
+
         return 'D (Tidak Baik)';
     }
 }
