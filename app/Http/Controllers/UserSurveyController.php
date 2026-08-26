@@ -50,16 +50,16 @@ class UserSurveyController extends Controller
 
         $user = auth()->user();
 
-        $response = SurveyResponse::create([
-            'survey_template_id' => $surveyTemplate->id,
-            'user_id' => $user->id,
-            'nama_responden' => $user->name,
-            'email' => $user->email,
-            'no_hp' => $user->no_hp,
-            'data_tambahan' => $request->input('data_tambahan', []),
-            'ip_address' => $request->ip(),
-            'tanggal_isi' => now(),
-        ]);
+$response = SurveyResponse::create([
+    'survey_template_id' => $surveyTemplate->id,
+    'user_id' => $user?->id,
+    'nama_responden' => $user?->name ?? $request->input('data_tambahan.nama'),
+    'email' => $user?->email ?? $request->input('data_tambahan.email'),
+    'no_hp' => $user?->no_hp ?? $request->input('data_tambahan.no_hp'),
+    'data_tambahan' => $request->input('data_tambahan', []),
+    'ip_address' => $request->ip(),
+    'tanggal_isi' => now(),
+]);
 
         $totalPersen = 0;
         $countTerukur = 0;
