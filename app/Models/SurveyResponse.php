@@ -19,10 +19,17 @@ class SurveyResponse extends Model
         'data_tambahan' => 'array',
     ];
 
-    public function template()
-    {
-        return $this->belongsTo(SurveyTemplate::class, 'survey_template_id');
-    }
+    public function surveyCreator()
+{
+    return $this->hasOneThrough(
+        User::class,
+        SurveyTemplate::class,
+        'id',
+        'id',
+        'survey_template_id',
+        'created_by'
+    );
+}
 
     public function user()
     {
