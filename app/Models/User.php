@@ -13,12 +13,23 @@ class User extends Authenticatable
     use HasFactory, Notifiable, HasApiTokens;
 
     protected $fillable = [
-        'role_id', 'name', 'username', 'email', 'no_hp', 'password', 'status',
+        'role_id',
+        'name',
+        'username',
+        'email',
+        'no_hp',
+        'password',
+        'status',
     ];
 
-    protected $hidden = ['password', 'remember_token'];
+    protected $hidden = [
+        'password',
+        'remember_token'
+    ];
 
-    protected $casts = ['email_verified_at' => 'datetime'];
+    protected $casts = [
+        'email_verified_at' => 'datetime'
+    ];
 
     public function role()
     {
@@ -28,6 +39,12 @@ class User extends Authenticatable
     public function integration()
     {
         return $this->hasOne(UserIntegration::class);
+    }
+
+    // Relasi user dengan semua respon surveinya
+    public function surveyResponses()
+    {
+        return $this->hasMany(SurveyResponse::class, 'user_id');
     }
 
     public function isSuperadmin(): bool

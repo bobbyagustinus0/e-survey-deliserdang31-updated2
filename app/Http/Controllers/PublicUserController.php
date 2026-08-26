@@ -8,7 +8,7 @@ class PublicUserController extends Controller
 {
     public function index()
     {
-        $users = User::query()
+        $users = User::withCount('surveyResponses')
             ->orderBy('name')
             ->get();
 
@@ -17,6 +17,11 @@ class PublicUserController extends Controller
 
     public function show(User $user)
     {
+        $user->load([
+            'surveyResponses.template',
+            'surveyResponses.answers.question'
+        ]);
+
         return view('public.user-detail', compact('user'));
     }
 }
