@@ -10,7 +10,46 @@ class BackupController extends Controller
 {
     protected string $backupPath = 'app/backups';
 
-    protected string $mysqlBin = 'C:\\xampp\\mysql\\bin';
+    /**
+     * Cari lokasi binary MySQL sesuai OS.
+     *
+     * Windows:
+     * C:\xampp\mysql\bin\mysqldump.exe
+     *
+     * Linux/Railway:
+     * mysqldump dari PATH
+     */
+    protected function getMysqlBinary(string $binary): string
+    {
+        if (PHP_OS_FAMILY === 'Windows') {
+            $paths = [
+                'C:\\xampp\\mysql\\bin\\' . $binary . '.exe',
+                'C:\\xampp\\mysql\\bin\\' . $binary,
+                'C:\\laragon\\bin\\mysql\\mysql-8.0.30\\bin\\' . $binary . '.exe',
+            ];
+
+            foreach ($paths as $path) {
+                if (File::exists($path)) {
+                    return $path;
+                }
+            }
+
+            throw new \Exception(
+                $binary . '.exe tidak ditemukan. Pastikan MySQL/XAMPP tersedia.'
+            );
+        }
+
+        // Linux / Railway
+        $binaryPath = trim((string) shell_exec('command -v ' . escapeshellarg($binary)));
+
+        if ($binaryPath !== '') {
+            return $binaryPath;
+        }
+
+        throw new \Exception(
+            $binary . ' tidak ditemukan di PATH server Railway.'
+        );
+    }
 
     public function index()
     {
@@ -57,22 +96,9 @@ class BackupController extends Controller
 
         $filepath = $dir . DIRECTORY_SEPARATOR . $filename;
 
-        $mysqldump = $this->mysqlBin . '\\mysqldump.exe';
-
         try {
+            $mysqldump = $this->getMysqlBinary('mysqldump');
 
-            /*
-             * Pastikan mysqldump ada.
-             */
-            if (!File::exists($mysqldump)) {
-                throw new \Exception(
-                    'mysqldump.exe tidak ditemukan: ' . $mysqldump
-                );
-            }
-
-            /*
-             * Ambil konfigurasi database.
-             */
             $host = $db['host'] ?: '127.0.0.1';
             $port = $db['port'] ?: 3306;
             $username = $db['username'];
@@ -80,46 +106,54 @@ class BackupController extends Controller
             $database = $db['database'];
 
             /*
-             * Escape untuk CMD Windows.
+             * Gunakan environment OS.
              */
-            $mysqldumpEscaped = '"' . $mysqldump . '"';
+            if (PHP_OS_FAMILY === 'Windows') {
+                $passwordOption = '';
 
-            /*
-             * Password.
-             */
-            $passwordOption = '';
+                if ($password !== '') {
+                    $passwordOption = ' -p' . escapeshellarg($password);
+                }
 
-            if ($password !== '') {
-                $passwordOption = ' -p' . escapeshellarg($password);
+                $command =
+                    '"' . $mysqldump . '"' .
+                    ' -h ' . escapeshellarg($host) .
+                    ' -P ' . escapeshellarg((string) $port) .
+                    ' -u ' . escapeshellarg($username) .
+                    $passwordOption .
+                    ' ' . escapeshellarg($database) .
+                    ' > ' . escapeshellarg($filepath) .
+                    ' 2>&1';
+
+                $fullCommand = 'cmd.exe /C "' . $command . '"';
+            } else {
+                /*
+                 * Linux / Railway
+                 */
+                $passwordOption = '';
+
+                if ($password !== '') {
+                    $passwordOption = ' --password=' . escapeshellarg($password);
+                }
+
+                $command =
+                    escapeshellarg($mysqldump) .
+                    ' -h ' . escapeshellarg($host) .
+                    ' -P ' . escapeshellarg((string) $port) .
+                    ' -u ' . escapeshellarg($username) .
+                    $passwordOption .
+                    ' ' . escapeshellarg($database) .
+                    ' > ' . escapeshellarg($filepath) .
+                    ' 2>&1';
+
+                $fullCommand = $command;
             }
-
-            /*
-             * Command yang sama seperti command
-             * yang terbukti berhasil di PowerShell.
-             */
-            $command =
-                $mysqldumpEscaped .
-                ' -h ' . escapeshellarg($host) .
-                ' -P ' . escapeshellarg((string) $port) .
-                ' -u ' . escapeshellarg($username) .
-                $passwordOption .
-                ' ' . escapeshellarg($database) .
-                ' > ' . escapeshellarg($filepath) .
-                ' 2>&1';
-
-            /*
-             * Jalankan menggunakan CMD Windows.
-             */
-            $fullCommand = 'cmd.exe /C "' . $command . '"';
 
             $output = [];
             $exitCode = 0;
 
             exec($fullCommand, $output, $exitCode);
 
-            /*
-             * Jika gagal.
-             */
             if ($exitCode !== 0) {
 
                 if (File::exists($filepath)) {
@@ -135,18 +169,12 @@ class BackupController extends Controller
                 );
             }
 
-            /*
-             * Pastikan file dibuat.
-             */
             if (!File::exists($filepath)) {
                 throw new \Exception(
                     'File backup tidak berhasil dibuat.'
                 );
             }
 
-            /*
-             * Pastikan file tidak kosong.
-             */
             if (File::size($filepath) <= 0) {
 
                 File::delete($filepath);
@@ -156,9 +184,6 @@ class BackupController extends Controller
                 );
             }
 
-            /*
-             * Simpan log sukses.
-             */
             BackupLog::create([
                 'nama_file' => $filename,
                 'jenis' => 'backup',
@@ -245,15 +270,8 @@ class BackupController extends Controller
 
         $db = config('database.connections.mysql');
 
-        $mysql = $this->mysqlBin . '\\mysql.exe';
-
         try {
-
-            if (!File::exists($mysql)) {
-                throw new \Exception(
-                    'mysql.exe tidak ditemukan: ' . $mysql
-                );
-            }
+            $mysql = $this->getMysqlBinary('mysql');
 
             if (!$tmpPath || !File::exists($tmpPath)) {
                 throw new \Exception(
@@ -267,28 +285,50 @@ class BackupController extends Controller
             $password = $db['password'] ?? '';
             $database = $db['database'];
 
-            $mysqlEscaped = '"' . $mysql . '"';
+            if (PHP_OS_FAMILY === 'Windows') {
 
-            $passwordOption = '';
+                $passwordOption = '';
 
-            if ($password !== '') {
-                $passwordOption = ' -p' . escapeshellarg($password);
+                if ($password !== '') {
+                    $passwordOption = ' -p' . escapeshellarg($password);
+                }
+
+                $command =
+                    '"' . $mysql . '"' .
+                    ' -h ' . escapeshellarg($host) .
+                    ' -P ' . escapeshellarg((string) $port) .
+                    ' -u ' . escapeshellarg($username) .
+                    $passwordOption .
+                    ' ' . escapeshellarg($database) .
+                    ' < ' . escapeshellarg($tmpPath) .
+                    ' 2>&1';
+
+                $fullCommand = 'cmd.exe /C "' . $command . '"';
+
+            } else {
+
+                /*
+                 * Linux / Railway
+                 */
+                $passwordOption = '';
+
+                if ($password !== '') {
+                    $passwordOption =
+                        ' --password=' . escapeshellarg($password);
+                }
+
+                $command =
+                    escapeshellarg($mysql) .
+                    ' -h ' . escapeshellarg($host) .
+                    ' -P ' . escapeshellarg((string) $port) .
+                    ' -u ' . escapeshellarg($username) .
+                    $passwordOption .
+                    ' ' . escapeshellarg($database) .
+                    ' < ' . escapeshellarg($tmpPath) .
+                    ' 2>&1';
+
+                $fullCommand = $command;
             }
-
-            /*
-             * Restore menggunakan input file.
-             */
-            $command =
-                $mysqlEscaped .
-                ' -h ' . escapeshellarg($host) .
-                ' -P ' . escapeshellarg((string) $port) .
-                ' -u ' . escapeshellarg($username) .
-                $passwordOption .
-                ' ' . escapeshellarg($database) .
-                ' < ' . escapeshellarg($tmpPath) .
-                ' 2>&1';
-
-            $fullCommand = 'cmd.exe /C "' . $command . '"';
 
             $output = [];
             $exitCode = 0;
