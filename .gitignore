@@ -15,3 +15,9 @@
 # Laravel cache
 /bootstrap/cache/*
 !/bootstrap/cache/.gitignore
+
+# Local storage
+/storage/
+
+# Local database backup
+/test-backup.sql
