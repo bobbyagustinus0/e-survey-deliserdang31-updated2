@@ -8,9 +8,30 @@ use Illuminate\Http\Request;
 
 class SurveyTemplateController extends Controller
 {
+    /**
+     * Query template sesuai user yang login.
+     *
+     * Superadmin -> semua template
+     * User biasa -> hanya template miliknya
+     */
+    private function templateQuery()
+    {
+        $query = SurveyTemplate::query();
+
+        if (!auth()->user()->isSuperadmin()) {
+            $query->where('created_by', auth()->id());
+        }
+
+        return $query;
+    }
+
     public function index()
     {
-        $templates = SurveyTemplate::withCount(['questions', 'responses'])->latest()->get();
+        $templates = $this->templateQuery()
+            ->withCount(['questions', 'responses'])
+            ->latest()
+            ->get();
+
         return view('survey_templates.index', compact('templates'));
     }
 
@@ -34,10 +55,21 @@ class SurveyTemplateController extends Controller
             'popup_jam_mulai' => 'nullable|date_format:H:i',
             'popup_jam_selesai' => 'nullable|date_format:H:i|after:popup_jam_mulai',
         ]);
+
+        /*
+        |--------------------------------------------------------------------------
+        | Pemilik survei
+        |--------------------------------------------------------------------------
+        */
         $data['created_by'] = auth()->id();
 
         $template = SurveyTemplate::create($data);
 
+        /*
+        |--------------------------------------------------------------------------
+        | Field identitas default
+        |--------------------------------------------------------------------------
+        */
         $template->identityFields()->createMany([
             [
                 'label' => 'Nama Lengkap',
@@ -57,17 +89,40 @@ class SurveyTemplateController extends Controller
             ],
         ]);
 
-        return redirect()->route('survey-templates.index')
-            ->with('success', 'Template survei berhasil dibuat. Silakan tambahkan pertanyaan survei.');
+        return redirect()
+            ->route('survey-templates.index')
+            ->with(
+                'success',
+                'Template survei berhasil dibuat. Silakan tambahkan pertanyaan survei.'
+            );
     }
 
     public function edit(SurveyTemplate $surveyTemplate)
     {
-        return view('survey_templates.form', ['template' => $surveyTemplate]);
+        /*
+        |--------------------------------------------------------------------------
+        | User biasa tidak boleh membuka template milik user lain
+        |--------------------------------------------------------------------------
+        */
+        $this->authorizeTemplate($surveyTemplate);
+
+        return view('survey_templates.form', [
+            'template' => $surveyTemplate
+        ]);
     }
 
-    public function update(Request $request, SurveyTemplate $surveyTemplate, SurveyPushService $pushService)
-    {
+    public function update(
+        Request $request,
+        SurveyTemplate $surveyTemplate,
+        SurveyPushService $pushService
+    ) {
+        /*
+        |--------------------------------------------------------------------------
+        | Pastikan template milik user yang sedang login
+        |--------------------------------------------------------------------------
+        */
+        $this->authorizeTemplate($surveyTemplate);
+
         $data = $request->validate([
             'kode_survei' => 'required|string|max:50|unique:survey_templates,kode_survei,' . $surveyTemplate->id,
             'judul_survei' => 'required|string|max:200',
@@ -82,9 +137,6 @@ class SurveyTemplateController extends Controller
             'popup_jam_selesai' => 'nullable|date_format:H:i|after:popup_jam_mulai',
         ]);
 
-        // Push ulang ke website User kalau survei aktif (baru diaktifkan ATAU memang sudah
-        // aktif dan sedang diedit, misal ubah jadwal pop up / pertanyaan) supaya data di
-        // website dinas selalu sinkron dengan yang terakhir diatur di sini.
         $perluPush = $data['status'] === 'aktif';
 
         $surveyTemplate->update($data);
@@ -92,18 +144,46 @@ class SurveyTemplateController extends Controller
         if ($perluPush) {
             $hasil = $pushService->pushSurvey($surveyTemplate);
 
-            return redirect()->route('survey-templates.index')->with(
-                $hasil['sukses'] ? 'success' : 'error',
-                'Template survei berhasil diperbarui. ' . $hasil['pesan']
-            );
+            return redirect()
+                ->route('survey-templates.index')
+                ->with(
+                    $hasil['sukses'] ? 'success' : 'error',
+                    'Template survei berhasil diperbarui. ' . $hasil['pesan']
+                );
         }
 
-        return redirect()->route('survey-templates.index')->with('success', 'Template survei berhasil diperbarui.');
+        return redirect()
+            ->route('survey-templates.index')
+            ->with('success', 'Template survei berhasil diperbarui.');
     }
 
     public function destroy(SurveyTemplate $surveyTemplate)
     {
+        /*
+        |--------------------------------------------------------------------------
+        | Pastikan user tidak bisa menghapus survei user lain
+        |--------------------------------------------------------------------------
+        */
+        $this->authorizeTemplate($surveyTemplate);
+
         $surveyTemplate->delete();
-        return back()->with('success', 'Template survei berhasil dihapus.');
+
+        return back()->with(
+            'success',
+            'Template survei berhasil dihapus.'
+        );
+    }
+
+    /**
+     * Proteksi kepemilikan template.
+     */
+    private function authorizeTemplate(SurveyTemplate $surveyTemplate): void
+    {
+        if (
+            !auth()->user()->isSuperadmin() &&
+            (int) $surveyTemplate->created_by !== (int) auth()->id()
+        ) {
+            abort(403, 'Anda tidak memiliki akses ke template survei ini.');
+        }
     }
 }

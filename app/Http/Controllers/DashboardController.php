@@ -11,43 +11,143 @@ class DashboardController extends Controller
 {
     public function index()
     {
-        $totalSurvei = SurveyTemplate::count();
-        $surveiAktif = SurveyTemplate::where('status', 'aktif')->count();
-        $totalResponden = SurveyResponse::count();
-        $totalUser = User::count();
+        $user = auth()->user();
+        $isSuperadmin = $user->isSuperadmin();
 
-        $rataIkm = round(SurveyResponse::whereNotNull('nilai_ikm')->avg('nilai_ikm') ?? 0, 2);
+        /*
+        |--------------------------------------------------------------------------
+        | Query Template Survei
+        |--------------------------------------------------------------------------
+        | Superadmin : melihat semua survei
+        | User biasa : hanya survei yang dibuat olehnya
+        |--------------------------------------------------------------------------
+        */
+        $templateQuery = SurveyTemplate::query();
 
-        // Grafik jumlah respon per bulan (12 bulan terakhir)
-        $responPerBulan = SurveyResponse::selectRaw("DATE_FORMAT(tanggal_isi, '%Y-%m') as bulan, COUNT(*) as total")
-            ->where('tanggal_isi', '>=', now()->subMonths(11)->startOfMonth())
+        if (!$isSuperadmin) {
+            $templateQuery->where('created_by', $user->id);
+        }
+
+        $totalSurvei = (clone $templateQuery)->count();
+
+        $surveiAktif = (clone $templateQuery)
+            ->where('status', 'aktif')
+            ->count();
+
+        /*
+        |--------------------------------------------------------------------------
+        | Query Respon
+        |--------------------------------------------------------------------------
+        | Respon mengikuti pemilik template surveinya.
+        |
+        | Jangan menggunakan SurveyResponse.user_id untuk filtering admin,
+        | karena user_id adalah orang yang mengisi survei.
+        |--------------------------------------------------------------------------
+        */
+        $responseQuery = SurveyResponse::query();
+
+        if (!$isSuperadmin) {
+            $responseQuery->whereHas('template', function ($query) use ($user) {
+                $query->where('created_by', $user->id);
+            });
+        }
+
+        $totalResponden = (clone $responseQuery)->count();
+
+        /*
+        |--------------------------------------------------------------------------
+        | Total User
+        |--------------------------------------------------------------------------
+        */
+        $totalUser = $isSuperadmin
+            ? User::count()
+            : 1;
+
+        /*
+        |--------------------------------------------------------------------------
+        | Rata-rata IKM
+        |--------------------------------------------------------------------------
+        */
+        $rataIkm = round(
+            (clone $responseQuery)
+                ->whereNotNull('nilai_ikm')
+                ->avg('nilai_ikm') ?? 0,
+            2
+        );
+
+        /*
+        |--------------------------------------------------------------------------
+        | Grafik jumlah respon per bulan
+        |--------------------------------------------------------------------------
+        */
+        $responPerBulan = (clone $responseQuery)
+            ->selectRaw("
+                DATE_FORMAT(tanggal_isi, '%Y-%m') as bulan,
+                COUNT(*) as total
+            ")
+            ->where(
+                'tanggal_isi',
+                '>=',
+                now()->subMonths(11)->startOfMonth()
+            )
             ->groupBy('bulan')
             ->orderBy('bulan')
             ->pluck('total', 'bulan');
 
-        // Rata-rata IKM per template survei (untuk grafik batang)
-        $ikmPerTemplate = SurveyTemplate::withCount('responses')
-            ->with(['responses' => function ($q) {
-                $q->select('survey_template_id', DB::raw('AVG(nilai_ikm) as avg_ikm'))
-                  ->groupBy('survey_template_id');
-            }])
+        /*
+        |--------------------------------------------------------------------------
+        | Rata-rata IKM per template
+        |--------------------------------------------------------------------------
+        */
+        $ikmPerTemplate = (clone $templateQuery)
+            ->withCount('responses')
             ->orderByDesc('responses_count')
             ->take(5)
             ->get()
-            ->map(function ($t) {
+            ->map(function ($template) {
                 return [
-                    'judul' => $t->judul_survei,
-                    'jumlah_respon' => $t->responses_count,
-                    'rata_ikm' => round($t->responses->avg('nilai_ikm') ?? 0, 2),
+                    'judul' => $template->judul_survei,
+                    'jumlah_respon' => $template->responses_count,
+                    'rata_ikm' => round(
+                        $template->responses()
+                            ->whereNotNull('nilai_ikm')
+                            ->avg('nilai_ikm') ?? 0,
+                        2
+                    ),
                 ];
             });
 
-        $surveiTerbaru = SurveyTemplate::latest()->take(5)->get();
-        $responTerbaru = SurveyResponse::with('template')->latest()->take(8)->get();
+        /*
+        |--------------------------------------------------------------------------
+        | Survei terbaru
+        |--------------------------------------------------------------------------
+        */
+        $surveiTerbaru = (clone $templateQuery)
+            ->latest()
+            ->take(5)
+            ->get();
+
+        /*
+        |--------------------------------------------------------------------------
+        | Respon terbaru
+        |--------------------------------------------------------------------------
+        */
+        $responTerbaru = (clone $responseQuery)
+            ->with('template')
+            ->latest('tanggal_isi')
+            ->take(8)
+            ->get();
 
         return view('dashboard.index', compact(
-            'totalSurvei', 'surveiAktif', 'totalResponden', 'totalUser', 'rataIkm',
-            'responPerBulan', 'ikmPerTemplate', 'surveiTerbaru', 'responTerbaru'
+            'totalSurvei',
+            'surveiAktif',
+            'totalResponden',
+            'totalUser',
+            'rataIkm',
+            'responPerBulan',
+            'ikmPerTemplate',
+            'surveiTerbaru',
+            'responTerbaru'
         ));
     }
 }
