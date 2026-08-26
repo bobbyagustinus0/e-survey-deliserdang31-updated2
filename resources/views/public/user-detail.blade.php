@@ -470,39 +470,94 @@
     </div>
 
     <div class="comment-list">
-        <!-- ===== komentar dinamis ===== -->
-        @forelse($user->comments ?? [] as $comment)
-            <div class="comment">
-                <div class="comment-avatar">
-                    <i class="fas fa-user"></i>
-                </div>
-                <div class="comment-body">
-                    <div class="meta">
-                        <strong>{{ $user->name }}</strong>
-                        <span>
-                            <i class="fas fa-calendar-day"></i>
-                            {{ $comment->created_at->format('d M Y') ?? 'Baru saja' }}
-                        </span>
-                    </div>
-                    <p>{{ $comment->body }}</p>
-                </div>
-            </div>
-        @empty
-            <div class="empty">
-                <i class="fas fa-comment-slash"></i>
-                <span>Belum ada komentar dari pengguna ini.</span>
-                <span>Pantau terus tanggapan survei.</span>
-            </div>
-        @endforelse
 
-        <!-- ===== fallback jika $user->comments belum ada ===== -->
-        @if(!isset($user->comments) || count($user->comments) === 0)
-            <div class="empty">
-                <i class="fas fa-message"></i>
-                <span>Komentar survei akan ditampilkan di sini.</span>
-                <span>Belum ada tanggapan dari {{ $user->name }}.</span>
+    @forelse($user->surveyResponses as $response)
+
+        <div class="comment">
+
+            <div class="comment-avatar">
+                <i class="fas fa-user"></i>
             </div>
-        @endif
+
+            <div class="comment-body">
+
+                <div class="meta">
+                    <strong>{{ $user->name }}</strong>
+
+                    <span>
+                        <i class="fas fa-calendar-day"></i>
+                        {{ optional($response->tanggal_isi)->format('d M Y') ?? 'Baru saja' }}
+                    </span>
+                </div>
+
+                @if($response->template)
+                    <div style="margin-bottom: 12px; color: #2563eb; font-weight: 600;">
+                        <i class="fas fa-clipboard-list"></i>
+                        {{ $response->template->judul_survei }}
+                    </div>
+                @endif
+
+                @forelse($response->answers as $answer)
+
+                    @if(!empty($answer->jawaban))
+
+                        <div style="margin-bottom: 12px;">
+
+                            @if($answer->question)
+                                <div style="
+                                    font-size: 13px;
+                                    color: #7a8fa5;
+                                    margin-bottom: 4px;
+                                ">
+                                    {{ $answer->question->pertanyaan }}
+                                </div>
+                            @endif
+
+                            <p>
+                                {{ $answer->jawaban }}
+                            </p>
+
+                        </div>
+
+                    @endif
+
+                @empty
+
+                    <p>Belum ada jawaban tertulis.</p>
+
+                @endforelse
+
+                @if($response->nilai_ikm !== null)
+
+                    <div style="
+                        margin-top: 10px;
+                        padding-top: 10px;
+                        border-top: 1px solid #e2e8f0;
+                        font-size: 14px;
+                        color: #64748b;
+                    ">
+                        Nilai IKM:
+                        <strong>{{ $response->nilai_ikm }}</strong>
+                    </div>
+
+                @endif
+
+            </div>
+
+        </div>
+
+    @empty
+
+        <div class="empty">
+            <i class="fas fa-comment-slash"></i>
+            <span>Belum ada komentar dari pengguna ini.</span>
+            <span>Pantau terus tanggapan survei.</span>
+        </div>
+
+    @endforelse
+
+</div>
+       
     </div>
 
 </div>
