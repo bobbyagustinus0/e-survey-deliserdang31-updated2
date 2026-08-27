@@ -64,6 +64,13 @@ class SurveyDemoSeeder extends Seeder
         // PENTING: seeder ini dibuat aman untuk dijalankan berkali-kali (idempotent) —
         // pertanyaan yang sudah ada di-update di tempat (ID-nya TIDAK berubah), bukan dihapus-lalu-dibuat-ulang.
         // Ini supaya jawaban responden yang sudah masuk (survey_answers) TIDAK ikut terhapus.
+        // Pertanyaan tertentu memakai label bintang kustom (bukan label default
+        // "Tidak Sesuai ... Sangat Sesuai"), misalnya pertanyaan biaya/tarif.
+        $labelKustom = [
+            'Bagaimana penilaian Anda terhadap kewajaran biaya/tarif dalam layanan ini?'
+                => ['Mahal', 'Sangat Murah', 'Sesuai', 'Murah', 'Gratis'],
+        ];
+
         $urutan = 1;
         $teksAktif = [];
 
@@ -77,6 +84,7 @@ class SurveyDemoSeeder extends Seeder
                     [
                         'kategori' => $kategori,
                         'tipe_jawaban' => 'rating_bintang',
+                        'opsi_jawaban' => $labelKustom[$teks] ?? null,
                         'urutan' => $urutan,
                         'wajib_diisi' => true,
                     ]
