@@ -659,6 +659,99 @@
         100% { transform: scale(1); }
     }
 
+    /* ===== STAR RATING (CUSTOM LABELS) ===== */
+    .star-rating-labeled {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.6rem;
+        margin-top: 0.75rem;
+    }
+
+    .star-rating-card {
+        position: relative;
+        cursor: pointer;
+        flex: 1 1 100px;
+        min-width: 90px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 0.4rem;
+        padding: 0.9rem 0.5rem;
+        text-align: center;
+        border: 2px solid rgba(0, 0, 0, 0.06);
+        border-radius: 14px;
+        background: rgba(255, 255, 255, 0.4);
+        backdrop-filter: blur(5px);
+        -webkit-backdrop-filter: blur(5px);
+        transition: var(--transition);
+    }
+
+    [data-theme="dark"] .star-rating-card {
+        border-color: rgba(255, 255, 255, 0.05);
+        background: rgba(255, 255, 255, 0.03);
+    }
+
+    .star-rating-card input[type="radio"] {
+        position: absolute;
+        opacity: 0;
+        width: 0;
+        height: 0;
+    }
+
+    .star-rating-card .star-rating-icon {
+        font-size: 1.5rem;
+        color: #f1c40f;
+        line-height: 1;
+    }
+
+    .star-rating-card .star-rating-text {
+        font-size: 0.8rem;
+        font-weight: 600;
+        color: #495057;
+    }
+
+    [data-theme="dark"] .star-rating-card .star-rating-text {
+        color: #adb5bd;
+    }
+
+    .star-rating-card:hover {
+        transform: translateY(-2px);
+        box-shadow: var(--card-shadow);
+        border-color: var(--gold);
+    }
+
+    .star-rating-card.is-selected,
+    .star-rating-card:has(input[type="radio"]:checked) {
+        border-color: var(--gold);
+        background: linear-gradient(135deg, rgba(185, 134, 46, 0.14), rgba(185, 134, 46, 0.04));
+        box-shadow: 0 0 0 4px rgba(185, 134, 46, 0.08);
+        transform: translateY(-2px) scale(1.02);
+    }
+
+    .star-rating-card.is-selected .star-rating-text,
+    .star-rating-card:has(input[type="radio"]:checked) .star-rating-text {
+        color: var(--gold);
+    }
+
+    .star-rating-card.is-selected .star-rating-icon,
+    .star-rating-card:has(input[type="radio"]:checked) .star-rating-icon {
+        animation: starPop 0.3s ease;
+    }
+
+    @media (max-width: 576px) {
+        .star-rating-card {
+            flex: 1 1 72px;
+            min-width: 72px;
+            padding: 0.7rem 0.35rem;
+        }
+        .star-rating-card .star-rating-icon {
+            font-size: 1.25rem;
+        }
+        .star-rating-card .star-rating-text {
+            font-size: 0.72rem;
+        }
+    }
+
     /* ===== NAVIGATION BUTTONS ===== */
     .survey-nav {
         display: flex;
@@ -1084,11 +1177,20 @@
                             </div>
 
                         @elseif ($q->tipe_jawaban === 'rating_bintang')
-                            <div class="star-rating">
-                                @for ($s = 5; $s >= 1; $s--)
-                                    <input type="radio" name="jawaban[{{ $q->id }}]" value="{{ $s }}" id="star_{{ $q->id }}_{{ $s }}" {{ $q->wajib_diisi ? 'required' : '' }}>
-                                    <label for="star_{{ $q->id }}_{{ $s }}"><i class="bi bi-star-fill"></i></label>
-                                @endfor
+                            @php
+                                $labelBintang = (is_array($q->opsi_jawaban) && count($q->opsi_jawaban) >= 2)
+                                    ? $q->opsi_jawaban
+                                    : ['Tidak Sesuai', 'Kurang Sesuai', 'Agak Sesuai', 'Sesuai', 'Sangat Sesuai'];
+                            @endphp
+                            <div class="star-rating-labeled">
+                                @foreach ($labelBintang as $idxBintang => $teksBintang)
+                                    @php $nilaiBintang = $idxBintang + 1; @endphp
+                                    <label class="star-rating-card" for="star_{{ $q->id }}_{{ $nilaiBintang }}">
+                                        <input type="radio" name="jawaban[{{ $q->id }}]" value="{{ $nilaiBintang }}" id="star_{{ $q->id }}_{{ $nilaiBintang }}" {{ $q->wajib_diisi ? 'required' : '' }}>
+                                        <span class="star-rating-icon"><i class="bi bi-star-fill"></i></span>
+                                        <span class="star-rating-text">{{ $teksBintang }}</span>
+                                    </label>
+                                @endforeach
                             </div>
 
                         @elseif ($q->tipe_jawaban === 'pilihan_ganda')
@@ -1187,7 +1289,31 @@ document.addEventListener('DOMContentLoaded', function() {
     
     updateTime();
     initSurveyNavigation();
+    initStarRatingLabeled();
 });
+
+// ===== STAR RATING (CUSTOM LABELS) =====
+function initStarRatingLabeled() {
+    document.querySelectorAll('.star-rating-labeled').forEach(function (group) {
+        const cards = Array.from(group.querySelectorAll('.star-rating-card'));
+
+        cards.forEach(function (card) {
+            const input = card.querySelector('input[type="radio"]');
+            if (!input) return;
+
+            if (input.checked) {
+                card.classList.add('is-selected');
+            }
+
+            input.addEventListener('change', function () {
+                cards.forEach(function (c) { c.classList.remove('is-selected'); });
+                if (input.checked) {
+                    card.classList.add('is-selected');
+                }
+            });
+        });
+    });
+}
 
 // ===== UPDATE TIME =====
 function updateTime() {
