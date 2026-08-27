@@ -1274,9 +1274,10 @@
                         <option value="esai" @selected($q->tipe_jawaban === 'esai')>📄 Esai</option>
                     </select>
                 </div>
-                <div class="mb-3" id="opsi{{ $q->id }}" style="display: {{ $q->tipe_jawaban === 'pilihan_ganda' ? 'block' : 'none' }}">
-                    <label class="form-label">Opsi Jawaban (satu opsi per baris)</label>
-                    <textarea name="opsi_jawaban" class="form-control" rows="3">{{ is_array($q->opsi_jawaban) ? implode("\n", $q->opsi_jawaban) : '' }}</textarea>
+                <div class="mb-3" id="opsi{{ $q->id }}" style="display: {{ in_array($q->tipe_jawaban, ['pilihan_ganda', 'rating_bintang']) ? 'block' : 'none' }}">
+                    <label class="form-label" id="opsiLabel{{ $q->id }}">{{ $q->tipe_jawaban === 'rating_bintang' ? 'Label Bintang (satu label per baris, urutan bintang 1 ke atas)' : 'Opsi Jawaban (satu opsi per baris)' }}</label>
+                    <textarea name="opsi_jawaban" class="form-control" rows="5" placeholder="Tidak Sesuai&#10;Kurang Sesuai&#10;Agak Sesuai&#10;Sesuai&#10;Sangat Sesuai">{{ is_array($q->opsi_jawaban) ? implode("\n", $q->opsi_jawaban) : '' }}</textarea>
+                    <div class="form-text">Jumlah bintang mengikuti jumlah baris (2–10). Jika dikosongkan untuk Rating Bintang, akan dipakai label default: Tidak Sesuai, Kurang Sesuai, Agak Sesuai, Sesuai, Sangat Sesuai.</div>
                 </div>
                 <div class="mb-3">
                     <label class="form-label">Urutan</label>
@@ -1328,8 +1329,9 @@
                     </select>
                 </div>
                 <div class="mb-3" id="opsiBaru" style="display:none">
-                    <label class="form-label">Opsi Jawaban (satu opsi per baris)</label>
-                    <textarea name="opsi_jawaban" class="form-control" rows="3" placeholder="Opsi 1&#10;Opsi 2&#10;Opsi 3"></textarea>
+                    <label class="form-label" id="opsiLabelBaru">Opsi Jawaban (satu opsi per baris)</label>
+                    <textarea name="opsi_jawaban" class="form-control" rows="5" placeholder="Opsi 1&#10;Opsi 2&#10;Opsi 3"></textarea>
+                    <div class="form-text" id="opsiHintBaru" style="display:none">Jumlah bintang mengikuti jumlah baris (2–10). Jika dikosongkan, akan dipakai label default: Tidak Sesuai, Kurang Sesuai, Agak Sesuai, Sesuai, Sangat Sesuai.</div>
                 </div>
                 <div class="mb-3">
                     <label class="form-label">Urutan</label>
@@ -1424,8 +1426,25 @@ function toggleOpsiField(select, targetId) {
 // ===== TOGGLE OPSI JAWABAN =====
 function toggleOpsiJawaban(select, targetId) {
     const target = document.getElementById(targetId);
-    if (target) {
-        target.style.display = select.value === 'pilihan_ganda' ? 'block' : 'none';
+    if (!target) return;
+
+    const isPilihanGanda = select.value === 'pilihan_ganda';
+    const isRatingBintang = select.value === 'rating_bintang';
+
+    target.style.display = (isPilihanGanda || isRatingBintang) ? 'block' : 'none';
+
+    const textarea = target.querySelector('textarea[name="opsi_jawaban"]');
+    const label = target.querySelector('label');
+    const hint = target.querySelector('.form-text');
+
+    if (isRatingBintang) {
+        if (label) label.textContent = 'Label Bintang (satu label per baris, urutan bintang 1 ke atas)';
+        if (textarea) textarea.placeholder = 'Tidak Sesuai\nKurang Sesuai\nAgak Sesuai\nSesuai\nSangat Sesuai';
+        if (hint) hint.style.display = 'block';
+    } else if (isPilihanGanda) {
+        if (label) label.textContent = 'Opsi Jawaban (satu opsi per baris)';
+        if (textarea) textarea.placeholder = 'Opsi 1\nOpsi 2\nOpsi 3';
+        if (hint) hint.style.display = 'none';
     }
 }
 </script>
