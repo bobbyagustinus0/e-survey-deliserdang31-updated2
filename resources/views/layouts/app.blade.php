@@ -68,11 +68,7 @@
                 </a>
                 @endif
 
-                @if(auth()->user()->hasMenuAccess('pengaduan'))
-                <a href="{{ route('pengaduan.index') }}" class="nav-link {{ request()->routeIs('pengaduan.*') ? 'active' : '' }}">
-                <i class="bi bi-megaphone-fill"></i> Pengaduan Masyarakat
-                </a>
-                @endif
+             
 
                 @if(auth()->user()->hasMenuAccess('backup_restore'))
                 <a href="{{ route('backup.index') }}" class="nav-link {{ request()->routeIs('backup.*') ? 'active' : '' }}">
