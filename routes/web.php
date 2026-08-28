@@ -15,7 +15,7 @@ use App\Http\Controllers\SurveyQuestionController;
 use App\Http\Controllers\SurveyResponseController;
 use App\Http\Controllers\SurveyTemplateController;
 use App\Http\Controllers\UserSurveyController;
-use App\Http\Controllers\PengaduanController;
+
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -194,23 +194,6 @@ Route::middleware('auth')->group(function () {
         });
 
 
-/*
-|--------------------------------------------------------------------------
-| Pengaduan Masyarakat (Damkar)
-|--------------------------------------------------------------------------
-*/
-
-Route::get('/pengaduan', [PengaduanController::class, 'index'])
-    ->name('pengaduan.index')
-    ->middleware('menu:pengaduan');
-
-Route::get('/pengaduan/{pengaduan}', [PengaduanController::class, 'show'])
-    ->name('pengaduan.show')
-    ->middleware('menu:pengaduan');
-
-Route::put('/pengaduan/{pengaduan}/status', [PengaduanController::class, 'updateStatus'])
-    ->name('pengaduan.updateStatus')
-    ->middleware('menu:pengaduan');
 
 
 
