@@ -15,6 +15,7 @@ use App\Http\Controllers\SurveyQuestionController;
 use App\Http\Controllers\SurveyResponseController;
 use App\Http\Controllers\SurveyTemplateController;
 use App\Http\Controllers\UserSurveyController;
+use App\Http\Controllers\PengaduanController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
