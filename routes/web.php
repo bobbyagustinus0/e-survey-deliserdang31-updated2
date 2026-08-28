@@ -193,20 +193,6 @@ Route::middleware('auth')->group(function () {
         });
 
 
-    {{--
-    TAMBAHKAN import ini di bagian paling atas routes/web.php,
-    sejajar dengan use App\Http\Controllers\SurveyResponseController; dst
---}}
-use App\Http\Controllers\PengaduanController;
-
-
-{{--
-    TAMBAHKAN blok ini di dalam Route::middleware('auth')->group(function () { ... })
-    yang sudah ada di web.php -- taruh persis setelah blok "Respon Survei"
-    (setelah Route::delete('/survey-responses/{surveyResponse}', ...))
-    dan sebelum blok "Backup & Restore Data".
---}}
-
 /*
 |--------------------------------------------------------------------------
 | Pengaduan Masyarakat (Damkar)
