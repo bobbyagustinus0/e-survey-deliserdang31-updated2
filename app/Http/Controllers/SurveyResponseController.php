@@ -130,12 +130,33 @@ class SurveyResponseController extends Controller
                 ->values();
         }
 
+        /*
+        |--------------------------------------------------------------------------
+        | Kolom Responden / Email bersifat kondisional
+        |--------------------------------------------------------------------------
+        | Platform ini dipakai bersama beberapa dinas — sebagian template masih
+        | mengaktifkan field "Nama Lengkap" / "Email" bawaan, sebagian sudah
+        | menghapusnya (mis. template Damkar). Supaya tabel tidak menampilkan
+        | kolom kosong ("Anonim" / "-" di semua baris) untuk template yang sudah
+        | tidak memakainya, kolom ini hanya ditampilkan kalau ADA setidaknya satu
+        | respon di halaman ini yang punya nilai nama_responden / email.
+        */
+        $tampilkanKolomResponden = $responses->contains(
+            fn ($r) => filled($r->nama_responden)
+        );
+
+        $tampilkanKolomEmail = $responses->contains(
+            fn ($r) => filled($r->email)
+        );
+
         return view(
             'survey_responses.index',
             compact(
                 'responses',
                 'templates',
-                'kolomField'
+                'kolomField',
+                'tampilkanKolomResponden',
+                'tampilkanKolomEmail'
             )
         );
     }

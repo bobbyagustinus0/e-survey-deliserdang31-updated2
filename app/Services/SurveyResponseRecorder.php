@@ -50,7 +50,9 @@ class SurveyResponseRecorder
                 $maksimalSkala = 4;
             } elseif ($question->tipe_jawaban === 'rating_bintang' && is_numeric($jawaban)) {
                 $nilaiSkala = (int) $jawaban;
-                $maksimalSkala = 5;
+                $maksimalSkala = (is_array($question->opsi_jawaban) && count($question->opsi_jawaban) >= 2)
+                    ? count($question->opsi_jawaban)
+                    : 5;
             }
 
             if ($maksimalSkala) {

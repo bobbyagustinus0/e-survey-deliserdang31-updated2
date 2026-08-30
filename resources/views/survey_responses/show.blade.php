@@ -941,15 +941,25 @@
                                     <span>{{ $a->question->pertanyaan ?? 'Pertanyaan tidak tersedia' }}</span>
                                 </div>
                                 <div class="answer-value">
-                                    @if($a->nilai_skala)
+                                    @php
+                                        $tipeJawabanIni = $a->question->tipe_jawaban ?? null;
+                                        $labelBintangIni = null;
+                                        if ($tipeJawabanIni === 'rating_bintang' && $a->nilai_skala) {
+                                            $daftarLabelIni = (is_array($a->question->opsi_jawaban ?? null) && count($a->question->opsi_jawaban) >= 2)
+                                                ? $a->question->opsi_jawaban
+                                                : ['Tidak Sesuai', 'Kurang Sesuai', 'Agak Sesuai', 'Sesuai', 'Sangat Sesuai'];
+                                            $labelBintangIni = $daftarLabelIni[$a->nilai_skala - 1] ?? null;
+                                        }
+                                    @endphp
+                                    @if($tipeJawabanIni === 'rating_bintang' && $a->nilai_skala)
+                                        <span class="badge-answer star">
+                                            <i class="bi bi-star-fill"></i>
+                                            {{ $labelBintangIni ?? $a->nilai_skala }} ({{ $a->nilai_skala }}/{{ is_array($a->question->opsi_jawaban ?? null) && count($a->question->opsi_jawaban) >= 2 ? count($a->question->opsi_jawaban) : 5 }})
+                                        </span>
+                                    @elseif($a->nilai_skala)
                                         <span class="badge-answer scale">
                                             <i class="bi bi-bar-chart-fill"></i>
                                             Skala {{ $a->nilai_skala }} / 4
-                                        </span>
-                                    @elseif(strpos($a->jawaban ?? '', '★') !== false || preg_match('/[1-5]+\s*[★☆]/', $a->jawaban ?? ''))
-                                        <span class="badge-answer star">
-                                            <i class="bi bi-star-fill"></i>
-                                            {{ $a->jawaban }}
                                         </span>
                                     @else
                                         <span class="badge-answer text">

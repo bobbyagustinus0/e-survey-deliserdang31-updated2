@@ -42,6 +42,46 @@ class SurveyQuestionController extends Controller
         }
     }
 
+    /**
+     * Ubah teks textarea "satu baris = satu opsi/label" menjadi array.
+     *
+     * - pilihan_ganda  : setiap baris menjadi satu opsi jawaban.
+     * - rating_bintang : setiap baris menjadi label bintang ke-1, ke-2, dst
+     *                    (jadi jumlah bintang mengikuti jumlah baris yang diisi,
+     *                    minimal 2 dan maksimal 10 bintang). Jika dikosongkan,
+     *                    label default akan dipakai saat ditampilkan ke publik.
+     * - tipe lain      : opsi_jawaban tidak dipakai, selalu null.
+     */
+    private function parseOpsiJawaban(?string $tipeJawaban, ?string $opsiMentah): ?array
+    {
+        if (!in_array($tipeJawaban, ['pilihan_ganda', 'rating_bintang'], true)) {
+            return null;
+        }
+
+        if (empty($opsiMentah)) {
+            return null;
+        }
+
+        $baris = array_values(array_filter(
+            array_map('trim', explode("\n", $opsiMentah)),
+            fn ($item) => $item !== ''
+        ));
+
+        if (empty($baris)) {
+            return null;
+        }
+
+        if ($tipeJawaban === 'rating_bintang') {
+            $baris = array_slice($baris, 0, 10);
+
+            if (count($baris) < 2) {
+                return null;
+            }
+        }
+
+        return $baris;
+    }
+
     public function index(SurveyTemplate $surveyTemplate)
     {
         /*
@@ -97,18 +137,10 @@ class SurveyQuestionController extends Controller
             ?? ($surveyTemplate->questions()->max('urutan') + 1);
 
         $data['wajib_diisi'] = $request->boolean('wajib_diisi');
-
-        if (
-            $data['tipe_jawaban'] === 'pilihan_ganda' &&
-            !empty($data['opsi_jawaban'])
-        ) {
-            $data['opsi_jawaban'] = array_map(
-                'trim',
-                explode("\n", $data['opsi_jawaban'])
-            );
-        } else {
-            $data['opsi_jawaban'] = null;
-        }
+        $data['opsi_jawaban'] = $this->parseOpsiJawaban(
+            $data['tipe_jawaban'],
+            $data['opsi_jawaban'] ?? null
+        );
 
         SurveyQuestion::create($data);
 
@@ -150,18 +182,10 @@ class SurveyQuestionController extends Controller
         ]);
 
         $data['wajib_diisi'] = $request->boolean('wajib_diisi');
-
-        if (
-            $data['tipe_jawaban'] === 'pilihan_ganda' &&
-            !empty($data['opsi_jawaban'])
-        ) {
-            $data['opsi_jawaban'] = array_map(
-                'trim',
-                explode("\n", $data['opsi_jawaban'])
-            );
-        } else {
-            $data['opsi_jawaban'] = null;
-        }
+        $data['opsi_jawaban'] = $this->parseOpsiJawaban(
+            $data['tipe_jawaban'],
+            $data['opsi_jawaban'] ?? null
+        );
 
         $question->update($data);
 
