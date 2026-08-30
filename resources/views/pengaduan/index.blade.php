@@ -9,7 +9,6 @@
         --primary-gradient: linear-gradient(135deg, #0B5D39 0%, #1a8a5a 100%);
         --danger: #dc3545;
         --card-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
-        --card-shadow-hover: 0 12px 48px rgba(0, 0, 0, 0.15);
         --border-radius: 20px;
         --transition: all 0.3s ease;
     }
@@ -85,9 +84,6 @@
         letter-spacing: .4px;
         white-space: nowrap;
     }
-    .table-pengaduan tbody tr {
-        transition: var(--transition);
-    }
     .table-pengaduan tbody tr:hover {
         background: rgba(11,93,57,0.04);
     }
@@ -98,6 +94,15 @@
         border-radius: 50px;
         font-size: .72rem;
         font-weight: 600;
+    }
+    .badge-status {
+        background: rgba(244, 185, 60, 0.15);
+        color: #9a6b00;
+        padding: .25rem .75rem;
+        border-radius: 50px;
+        font-size: .72rem;
+        font-weight: 600;
+        white-space: nowrap;
     }
     .isi-preview {
         max-width: 280px;
@@ -152,7 +157,7 @@
         <form method="GET" class="row g-2 filter-form">
             <div class="col-md-4">
                 <input type="text" name="cari" value="{{ request('cari') }}" class="form-control"
-                       placeholder="Cari nama, no HP, lokasi, atau no. tiket...">
+                       placeholder="Cari nama, kontak, lokasi, atau ID laporan...">
             </div>
             <div class="col-md-3">
                 <select name="kategori" class="form-select">
@@ -179,38 +184,37 @@
             <table class="table table-pengaduan align-middle">
                 <thead>
                     <tr>
-                        <th>No. Tiket</th>
+                        <th>ID Laporan</th>
                         <th>Pelapor</th>
                         <th>Kontak</th>
                         <th>Kategori</th>
                         <th>Lokasi</th>
                         <th>Isi Laporan</th>
+                        <th>Status</th>
                         <th>Waktu</th>
                         <th class="text-center">Aksi</th>
                     </tr>
                 </thead>
                 <tbody>
                     @forelse($pengaduan as $p)
-                        @php
-                            $isiJawaban = $p->answers->first(fn($a) => str_contains(strtolower($a->question->pertanyaan ?? ''), 'isi') || str_contains(strtolower($a->question->pertanyaan ?? ''), 'kronologi'))?->jawaban;
-                        @endphp
                         <tr>
-                            <td><code>{{ data_get($p->data_tambahan, 'nomor_tiket', '-') }}</code></td>
-                            <td>{{ $p->nama_responden ?: 'Anonim' }}</td>
-                            <td>{{ $p->no_hp ?: '-' }}</td>
+                            <td><code>{{ $p->id }}</code></td>
+                            <td>{{ $p->nama ?: 'Anonim' }}</td>
+                            <td>{{ $p->kontak ?: '-' }}</td>
                             <td>
-                                @if($k = data_get($p->data_tambahan, 'kategori'))
-                                    <span class="badge-kategori">{{ $k }}</span>
+                                @if($p->kategori)
+                                    <span class="badge-kategori">{{ $p->kategori }}</span>
                                 @else
                                     -
                                 @endif
                             </td>
-                            <td>{{ data_get($p->data_tambahan, 'lokasi', '-') }}</td>
+                            <td>{{ $p->lokasi ?: '-' }}</td>
                             <td>
-                                <span class="isi-preview" title="{{ $isiJawaban }}">{{ $isiJawaban ?: '-' }}</span>
+                                <span class="isi-preview" title="{{ $p->isi }}">{{ $p->isi ?: '-' }}</span>
                             </td>
+                            <td><span class="badge-status">{{ $p->status ?: 'Baru diterima' }}</span></td>
                             <td style="font-size:.8rem;color:#6c757d;white-space:nowrap;">
-                                {{ optional($p->tanggal_isi)->format('d-m-Y H:i') ?: '-' }}
+                                {{ optional($p->waktu)->format('d-m-Y H:i') ?: '-' }}
                             </td>
                             <td>
                                 <div class="d-flex gap-2 justify-content-center">
@@ -218,7 +222,7 @@
                                         <i class="bi bi-eye"></i>
                                     </a>
                                     <form action="{{ route('pengaduan.destroy', $p) }}" method="POST" class="form-delete"
-                                          data-item-name="pengaduan {{ $p->nama_responden ?: 'anonim' }}">
+                                          data-item-name="pengaduan {{ $p->nama ?: 'anonim' }}">
                                         @csrf @method('DELETE')
                                         <button class="btn-action delete" title="Hapus"><i class="bi bi-trash"></i></button>
                                     </form>
@@ -227,7 +231,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="8">
+                            <td colspan="9">
                                 <div class="empty-state-table">
                                     <i class="bi bi-inbox"></i>
                                     <h6>Belum Ada Pengaduan</h6>

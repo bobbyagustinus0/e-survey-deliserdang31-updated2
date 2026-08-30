@@ -34,7 +34,7 @@
     }
     .detail-row { display: flex; padding: .6rem 0; border-bottom: 1px dashed rgba(0,0,0,0.08); }
     .detail-row .label { width: 200px; font-weight: 600; color: #6c757d; font-size: .85rem; }
-    .detail-row .value { flex: 1; }
+    .detail-row .value { flex: 1; white-space: pre-line; }
     .badge-kategori {
         background: var(--primary-gradient);
         color: #fff;
@@ -53,42 +53,44 @@
         <div class="detail-title"><i class="bi bi-megaphone-fill me-2"></i>Detail Pengaduan</div>
 
         <div class="detail-row">
-            <div class="label">No. Tiket</div>
-            <div class="value"><code>{{ data_get($pengaduan->data_tambahan, 'nomor_tiket', '-') }}</code></div>
+            <div class="label">ID Laporan</div>
+            <div class="value"><code>{{ $pengaduan->id }}</code></div>
         </div>
         <div class="detail-row">
             <div class="label">Nama Pelapor</div>
-            <div class="value">{{ $pengaduan->nama_responden ?: 'Anonim' }}</div>
+            <div class="value">{{ $pengaduan->nama ?: 'Anonim' }}</div>
         </div>
         <div class="detail-row">
             <div class="label">Kontak / No. HP</div>
-            <div class="value">{{ $pengaduan->no_hp ?: '-' }}</div>
+            <div class="value">{{ $pengaduan->kontak ?: '-' }}</div>
         </div>
         <div class="detail-row">
             <div class="label">Kategori</div>
             <div class="value">
-                @if($k = data_get($pengaduan->data_tambahan, 'kategori'))
-                    <span class="badge-kategori">{{ $k }}</span>
+                @if($pengaduan->kategori)
+                    <span class="badge-kategori">{{ $pengaduan->kategori }}</span>
                 @else - @endif
             </div>
         </div>
         <div class="detail-row">
             <div class="label">Lokasi Kejadian</div>
-            <div class="value">{{ data_get($pengaduan->data_tambahan, 'lokasi', '-') }}</div>
+            <div class="value">{{ $pengaduan->lokasi ?: '-' }}</div>
         </div>
-        @foreach($pengaduan->answers as $a)
-            <div class="detail-row">
-                <div class="label">{{ $a->question->pertanyaan ?? 'Jawaban' }}</div>
-                <div class="value">{{ $a->jawaban }}</div>
-            </div>
-        @endforeach
+        <div class="detail-row">
+            <div class="label">Isi Laporan</div>
+            <div class="value">{{ $pengaduan->isi }}</div>
+        </div>
+        <div class="detail-row">
+            <div class="label">Status</div>
+            <div class="value">{{ $pengaduan->status ?: 'Baru diterima' }}</div>
+        </div>
         <div class="detail-row">
             <div class="label">Waktu Masuk</div>
-            <div class="value">{{ optional($pengaduan->tanggal_isi)->format('d-m-Y H:i') ?: '-' }} WIB</div>
+            <div class="value">{{ optional($pengaduan->waktu)->format('d-m-Y H:i') ?: '-' }} WIB</div>
         </div>
         <div class="detail-row">
-            <div class="label">Sumber</div>
-            <div class="value">{{ data_get($pengaduan->data_tambahan, 'sumber', '-') }}</div>
+            <div class="label">Sumber Dinas</div>
+            <div class="value">{{ $pengaduan->sumber_dinas ?: '-' }}</div>
         </div>
 
         <form action="{{ route('pengaduan.destroy', $pengaduan) }}" method="POST" class="mt-4 form-delete"
