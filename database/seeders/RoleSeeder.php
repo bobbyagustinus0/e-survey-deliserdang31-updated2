@@ -25,6 +25,7 @@ class RoleSeeder extends Seeder
                 'survey_data',
                 'survey_question',
                 'survey_response',
+                'pengaduan',
                 'laporan',
                 'pengaturan',
             ],
@@ -32,7 +33,7 @@ class RoleSeeder extends Seeder
 
         Role::updateOrCreate(['slug' => 'operator'], [
             'nama_role' => 'Operator Survei',
-            'menu_access' => ['dashboard', 'survey_question', 'survey_response'],
+            'menu_access' => ['dashboard', 'survey_question', 'survey_response', 'pengaduan'],
         ]);
 
         Role::updateOrCreate(['slug' => 'pimpinan'], [

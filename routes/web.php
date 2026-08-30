@@ -13,6 +13,7 @@ use App\Http\Controllers\SettingController;
 use App\Http\Controllers\SurveyIdentityFieldController;
 use App\Http\Controllers\SurveyQuestionController;
 use App\Http\Controllers\SurveyResponseController;
+use App\Http\Controllers\PengaduanController;
 use App\Http\Controllers\SurveyTemplateController;
 use App\Http\Controllers\UserSurveyController;
 use Illuminate\Support\Facades\Route;
@@ -210,6 +211,26 @@ Route::middleware('auth')->group(function () {
     Route::delete('/survey-responses/{surveyResponse}', [SurveyResponseController::class, 'destroy'])
         ->name('survey-responses.destroy')
         ->middleware('menu:survey_response');
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | Pengaduan Masyarakat (khusus respon dari template PENGADUAN-*, mis. dari
+    | form "Lapor" website Damkar)
+    |--------------------------------------------------------------------------
+    */
+
+    Route::get('/pengaduan', [PengaduanController::class, 'index'])
+        ->name('pengaduan.index')
+        ->middleware('menu:pengaduan');
+
+    Route::get('/pengaduan/{pengaduan}', [PengaduanController::class, 'show'])
+        ->name('pengaduan.show')
+        ->middleware('menu:pengaduan');
+
+    Route::delete('/pengaduan/{pengaduan}', [PengaduanController::class, 'destroy'])
+        ->name('pengaduan.destroy')
+        ->middleware('menu:pengaduan');
 
 
     /*

@@ -18,6 +18,7 @@ class RoleController extends Controller
         'survey_data' => 'Data Survei',
         'survey_question' => 'Pertanyaan Survei',
         'survey_response' => 'Respon Survei',
+        'pengaduan' => 'Pengaduan Masyarakat',
         'backup_restore' => 'Backup & Restore Data',
         'hak_akses' => 'Hak Akses',
         'laporan' => 'Laporan',
